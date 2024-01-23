@@ -1,0 +1,13 @@
+*.Rproj*
+.user
+.Rhistory
+.Ruserdata
+.DS_Store
+*.png
+*.exe
+*.rds
+*.rda
+notes.md
+.Rproj.user
+.pdf
+.csv
