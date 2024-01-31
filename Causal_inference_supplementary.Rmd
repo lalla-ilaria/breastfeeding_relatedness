@@ -170,7 +170,7 @@ N <- 558
 
 household <- sample(1:4, N, replace = TRUE)
 
-col_hh <- ifelse(household == 1, "lightgreen", ifelse(household == 2, "coral", ifelse(household == 3, "goldenrod", "lightblue")))
+col_hh <- ifelse(household == 1, "lightgreen", ifelse(household == 2, "indianred", ifelse(household == 3, "goldenrod", "lightblue")))
 
 #1 duolocal
 
@@ -206,9 +206,11 @@ hist(child_rel, add = TRUE, col = col.alpha("blue", 0.4))
 
 ```
  
- * Generate simulated duration from Poisson distribution *(will experiment with censoring soon to match real data)*
+ * Generate simulated duration from Poisson distribution with different causal models *(will experiment with censoring soon to match real data)*
  
  We then generate duration of breastfeeding from these genetic relatedness (simulated) data depending on the two main alternative hypotheses and possible other scenarios. These can be summarized as:
+ 
+ <!-- Causal models = causal structure + parameters -->
  
  - A: Parent-offspring conflict: child +, both parents -
  - B: Gender conflict: child 0, mother +, father -
@@ -265,6 +267,22 @@ After simulating the datasets according to causal models (A to D), we test sever
 *Note: we need to try different parameter structures (which are entered here from line 219 to 222, or as parameters of the function for the simulation in the simulate_breastfeeding script) and see how the parameters estimated from the real data match to differences in the simulation processes. We want to find the causal structure (positive and negative effects for individual's relatedness in the simulation for the poisson rate, see simulation code above). The following chunk produces plots that can be very helpful to get an idea of which combination of parameters matches the real data, so feel free to play with it!*
 
 ```{r test_cox}
+#####seperate model
+status <- as.factor(Feeding$status)
+residence_real<-coxme(Surv(time,status)~PMR1+sex+order+size+ age+BirthPeriod+(1|Village/ITID)
+           ,data = Feeding) 
+mother_real<-coxme(Surv(time,status)~mom+sex+order+size+age+BirthPeriod+(1|Village/ITID)
+              ,data = Feeding) 
+
+child_real<-coxme(Surv(time,status)~ kid + sex+order+ age+size+BirthPeriod+ (1|Village/ITID)
+             ,data = Feeding)
+father_real <-coxme(Surv(time,status)~father+sex+order+ age+size+BirthPeriod+(1|Village/ITID)
+           ,data = Feeding)
+parents_real <- coxme(Surv(time,status)~mom+father+sex+size+order+age+BirthPeriod+(1|Village/ITID)
+                ,data = Feeding) 
+all_real <- coxme( Surv( time, status) ~ kid + mom + father + sex + size + order + age + BirthPeriod +  (1|Village/ITID), data = Feeding)
+
+#add one simulation
 status_sim <- rep(1, N)
 child_A <- coxph(Surv(duration_A, status_sim)~child_rel) 
 child_B <- coxph(Surv(duration_B, status_sim)~child_rel) 
@@ -286,32 +304,18 @@ parents_B <- coxph(Surv(duration_B, status_sim)~mom_rel + dad_rel)
 parents_C <- coxph(Surv(duration_C, status_sim)~mom_rel + dad_rel)
 parents_D <- coxph(Surv(duration_D, status_sim)~mom_rel + dad_rel)
 
-all_A <- coxph(Surv(duration_A, status_sim)~child_rel + mom_rel + dad_rel)
-all_B <- coxph(Surv(duration_B, status_sim)~child_rel + mom_rel + dad_rel)
-all_C <- coxph(Surv(duration_C, status_sim)~child_rel + mom_rel + dad_rel)
-all_D <- coxph(Surv(duration_D, status_sim)~child_rel + mom_rel + dad_rel)
+all_A <- coxph(Surv(duration_A, status_sim)~ child_rel + mom_rel + dad_rel)
+all_B <- coxph(Surv(duration_B, status_sim)~ child_rel + mom_rel + dad_rel)
+all_C <- coxph(Surv(duration_C, status_sim)~ child_rel + mom_rel + dad_rel)
+all_D <- coxph(Surv(duration_D, status_sim)~ child_rel + mom_rel + dad_rel)
 
-residence_A <- coxph(Surv(duration_A, status_sim)~strata(as.factor(household)))
-residence_B <- coxph(Surv(duration_B, status_sim)~strata(household))
-residence_C <- coxph(Surv(duration_C, status_sim)~strata(household))
-residence_D <- coxph(Surv(duration_D, status_sim)~strata(household))
+residence_A <- coxph(Surv(duration_A, status_sim)~as.factor(household))
+residence_B <- coxph(Surv(duration_B, status_sim)~as.factor(household))
+residence_C <- coxph(Surv(duration_C, status_sim)~as.factor(household))
+residence_D <- coxph(Surv(duration_D, status_sim)~as.factor(household))
 
-#####seperate model
-status <- as.factor(Feeding$status)
-residence_real<-coxme(Surv(time,status)~sex+order+size+ age+BirthPeriod+PMR1+(1|Village/ITID)
-           ,data = Feeding) 
-mother_real<-coxme(Surv(time,status)~mom+sex+order+size+age+BirthPeriod+(1|Village/ITID)
-              ,data = Feeding) 
 
-child_real<-coxme(Surv(time,status)~ kid + sex+order+ age+size+BirthPeriod+ (1|Village/ITID)
-             ,data = Feeding)
-father_real <-coxme(Surv(time,status)~father+sex+order+ age+size+BirthPeriod+(1|Village/ITID)
-           ,data = Feeding)
-parents_real <- coxme(Surv(time,status)~mom+father+sex+size+order+age+BirthPeriod+(1|Village/ITID)
-                ,data = Feeding) 
-all_real <- coxme( Surv( time, status) ~ sex + size + order + age + BirthPeriod + kid + mom + father + (1|Village/ITID), data = Feeding)
-
-par(mfrow = c(2,2),mgp = c(1.5, 0.5, 0), mar = c(2.5, 2.5, 2, 1) + 0.1)
+par(mfrow = c(3,2),mgp = c(1.5, 0.5, 0), mar = c(2.5, 2.5, 2, 1) + 0.1)
 plot(c(child_A$coefficients, child_B$coefficients, child_C$coefficients, child_D$coefficients, child_real$coefficients[1]),1:5, pch = 16, xlab = "coefficient child relatedness", ylab = "causal model" )
 text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
 plot(c(mother_A$coefficients, mother_B$coefficients, mother_C$coefficients, mother_D$coefficients, mother_real$coefficients[1]),1:5, pch = 16, xlab = "coefficient mother relatedness", ylab = "causal model")
@@ -319,6 +323,10 @@ text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
 plot(c(father_A$coefficients, father_B$coefficients, father_C$coefficients, father_D$coefficients, father_real$coefficients[1]),1:5, pch = 16, xlab = "coefficient father relatedness", ylab = "causal model")
 text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
 plot(c(parents_A$coefficients, parents_B$coefficients, parents_C$coefficients, parents_D$coefficients, parents_real$coefficients[1:2]),rep(1:5, each = 2), pch = 16, xlab = "coefficient parents relatedness", ylab = "causal model", col = c("darkred", "darkblue"))
+text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
+plot(c(all_A$coefficients, all_B$coefficients, all_C$coefficients, all_D$coefficients, all_real$coefficients[1:3]),rep(1:5, each = 3), pch = 16, xlab = "coefficient child and parents relatedness", ylab = "causal model", col = c("darkgreen","darkred", "darkblue"))
+text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
+plot(c(residence_A$coefficients, residence_B$coefficients, residence_C$coefficients, residence_D$coefficients, residence_real$coefficients[1:3]),rep(1:5, each = 3), pch = 16, xlab = "coefficient household type relatedness", ylab = "causal model", col = c("indianred", "goldenrod", "lightblue"))
 text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
 
 ```
