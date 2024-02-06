@@ -1,6 +1,6 @@
 ---
 title: "Causal inference (draft of supplementary info for paper)"
-output: pdf_document
+output: bookdown::pdf_document2
 date: "2023-12-06"
 ---
 
@@ -9,11 +9,17 @@ knitr::opts_chunk$set(echo = FALSE)
 library(rethinking)
 library(dagitty)
 library(truncnorm)
-library(coxme)
 library(survival)
+library(coxme)
+library(tidyverse)
 
 #load and process real data
-Feeding <-read.csv("modelwithr.csv",header=TRUE)
+Feeding <-read.csv("../modelwithr full.csv",header=TRUE)
+col_realhh <- ifelse(Feeding$PMR == "Duo", "lightgreen", ifelse(Feeding$PMR == "Matri", "coral", ifelse(Feeding$PMR == "Neo", "goldenrod", "lightblue")))
+#1 duolocal
+#2 matrilocal
+#3 neolocal
+#4 patrilocal
 
 #TO DO: check the data processing 
 sex<-as.factor(Feeding$Csex)
@@ -34,13 +40,15 @@ size<-as.factor(Feeding$HSCAT)
 
 ```
 
-## Genetic relatedness and why it can cause problems to causal inference
+# Genetic relatedness and why it can cause problems to causal inference
 
-The present paper leverages genetic relatedness of children and parents to the rest of the household as a measure of their bargaining power to define breastfeeding duration, i.e. their ability to define how long should a child be breastfed according to their (fitness) interests. 
+The present paper leverages genetic relatedness of individuals within a household as a measure of their bargaining power to define breastfeeding duration, i.e. their ability to define how long should a child be breastfed according to their (fitness) interests. We consider genetic relatedness of each focal child, and of their parents to the rest of the household. 
 
 We posit that the child's interest is to prolong breastfeeding as long as possible, as long breastfeeding is associated to better health outcomes. Parents, on the contrary should prefer a shorter breastfeeding duration in order to move on to produce a new offspring, creating the conditions for a parent-offspring conflict. But the parents themselves have different investment in the length of the duration, which per se generates intersexual conflict. In particular, the mother is expected to prefer a longer breastfeeding duration, as females are expected to invest more in each offspring, while men should prefer shorter duration, as they have an interest in increasing the number of offspring rather than the quality There are additional considerations relative to social conditions and labour requirements, as breastfeeding women cannot engage in several productive activities or have limited labour outputs (reduced hours of work, reduced production per hour). We hence expect that in households where the mother has higher average relatedness to the rest of the members, these are more likely to cover for her missing labour and thus favour longer breastfeeding duration compared to households where the father has higher relatedness.
 
-As mentioned, this approach hinges on using on the average relatedness level of children and parents to the household as a predictor of breastfeeding duration, which creates problems for causal inference, as the genetic relatedness of parents and offspring is correlated by definition. Average genetic relatedness of a child to the rest of the household should approximate the sum of the relatedness of the parents divided by two ($relatednessChild = (relatednessMother + relatednessFather )/ 2$), as children share on average half of their genome with their parents, at least in households that include a reasonably high number of members (the situation is different in a household where only the parents and a single child are present *note: maybe expand here?*) This means that distinguishing between the effect of child and parents' relatedness can be overly complicated. We are helped in this task by the peculiar distribution of social arrangements in the studied areas, where ethnic groups vary in their preferred residence patterns and not all households within the ethnic group follow the residence decision of the rest of the group. This creates a reasonable amount of variation between and within ethnic group in choice of residence (i.e. duolocal, matrilocal, neolocal or patrilocal). The result is that there is a considerable amount of variation in how related are individuals within a household, which can be leveraged for the statistical analysis (see SI Table 1, which reports average relatedness between Mothers, Fathers and Children and the rest of their households by residence type (at the household level). But the problem of correlation between the parents' and child's relatedness remain. 
+As mentioned, this approach hinges on using on the average relatedness level of children and parents to the household as a predictor of breastfeeding duration, which creates problems for causal inference, as the genetic relatedness of parents and offspring is correlated by definition. In a household composed by only a child and their unrelated parents, the relatedness of the parents to the rest of the household is $\frac{0.5 + 0}{2} = 0.25$, as each parent shares half of their genome, on average, with their child. The child shares half of their genome with each parent, making the child's relatedness simply the sum of their parent's relatednesses $0.25 + 0.25 = 0.5$. But parents can also be related to each other, and as the number of the member of a household increases, the aerage genetic relatedness of a child to the rest of the household approximates the sum of the relatedness of the parents divided by two ($\frac{relatednessMother + relatednessFather}{2} = relatednessChild$, in the limit case where there is an infinite number of siblings of the focal child, each related 0.5 to both the parents and the focal child). This creates a situation where the relatedness of parents and offspring are inextricably connected, so that distinguishing between the effect of child and parents' relatedness can be overly complicated. Only variability in the average structure of the household can create enough variation to address this problem.
+
+The the area of western China where data was collected offers just such variation, as there coexist multiple ethnic groups differ in their preferred residence patterns. Moreover, not all households within an ethnic group follow the mainstream residence type. This creates a reasonable amount of variation between and within ethnic group in choice of residence (i.e. duolocal, matrilocal, neolocal or patrilocal). The result is that there is a considerable amount of variation in how related are individuals within a household (see figure 1, main text), which can be leveraged for the statistical analysis. SI Table 1 reports average relatedness between Mothers, Fathers and Children and the rest of their households by residence type (at the household level). But the problem of correlation between the parents' and child's relatedness remain, simply because children share half of their genome with their parents by default. 
 
 |     Average relatedness to the household    |           Duolocal (N=164)         |          Matrilocal (N=124)        |            Neolocal \ (N=94)          |          Patrilocal \ (N=213)        |
 |:-------------------------------------------:|:------------------------------------:|:------------------------------------:|:-------------------------------------:|:------------------------------------:|
@@ -53,18 +61,107 @@ SI Table 1: Average relatedness of mothers to other household members and kids t
  Household members
 
 
-Thus, we develop a workflow that aims  to understand the consequences of this inescapable correlation for causal inference. We begin by using Direct Acyclic Graphs (DAGs) as a tool to illustrate causal connections between the relevant variables (see next section). This is helps in one hand to construct statistical models that are able to produce the correct inference to understand the effect of the relevant variables (i.e. define causal queries and choose the appropriate control sets), but also as a lead to build simulations. The use of simulations is necessary in this case to guide our intuition on what can the statistical models tell us about the _real_ effects of genetic relatedness. Because of the correlation in genetic relatedness, we observe the phenomenon of equifinality: different causal models can produce the same distribution in the data and thus be practically non-distinguishable in the real data (e.g. the model could estimate the same values for parameter relative to the effect of mother's relatedness if the causal effect came from _her_ relatedness or from that of her child). Simulating data according to realistic relatedness patterns and following different causal models allows us to observe in a controlled (simulated) setting _what_ the statistical models can tell us (i.e. which hypotheses are virtually indistinguishable in the real data), but also guide us in the interpretation of the results of the analyses on the real data. We present below i) the assumed causal structure between the relevant variables; ii) the construction and use of simulated data to understand our ability to make inferences from the real data; iii) the comparison between the results from the simulated and real data and how we can help the first for our inferences with respect with the second. We focus our efforts for improving our causal understanding on the problems relative to genetic relatedness, as standard methods such as do-calculus can be used to guide inference relative to the other predictors without the need to recur to simulation. 
+Thus, we develop a workflow that aims to understand the consequences of this inescapable correlation for causal inference. We begin by using Direct Acyclic Graphs (DAGs) as a tool to illustrate causal connections between the relevant variables (see next section). This is helps in one hand to construct statistical models that are able to produce the correct inference to understand the effect of the relevant variables (i.e. define causal queries and choose the appropriate control sets), but also as a lead to build simulations. The use of simulations is necessary in this case to guide our intuition on what can the statistical models tell us about the _real_ effects of genetic relatedness. Because of the correlation in genetic relatedness, we observe the phenomenon of equifinality: different causal models can produce the same distribution in the data and thus be practically non-distinguishable in the real data (e.g. the model could estimate the same values for parameter relative to the effect of mother's relatedness if the causal effect came from _her_ relatedness or from that of her child). Simulating data according to realistic relatedness patterns and following different causal models allows us to observe in a controlled (simulated) setting _what_ the statistical models can tell us (i.e. which hypotheses are virtually indistinguishable in the real data), but also guide us in the interpretation of the results of the analyses on the real data. We present below i) the assumed causal structure between the relevant variables; ii) the construction and use of simulated data to understand our ability to make inferences from the real data; iii) the comparison between the results from the simulated and real data and how we can use the first for our inferences with respect to the second. We focus our efforts with simulations on the problems relative to causal inference and genetic relatedness, but first we report our approach on causal inference relative to the other predictors. 
 
 
 
 
-## Inferred causal structure
+# Inferred causal structure
 
-1. Report DAG and explain causal pathways (why would the factors influence breastfeeding duration)
+## Description of variables
 
-Figure \@ref(fig:dag)) shows the variables we consider for our analysis and the causal connections we assume between them. Below, wer describe each of them in detail. 
 
-```{r dag, fig.cap = "DAG illustrating the variables considered in our analysis and the causal connections between them. See the text for details."}
+* Stop feeding: this is our outcome variable. It is the age at which the child was not breastfed anymore. Figure \@ref(fig:duration_data) shows the duration of breastfeeding in our sample. The majority of mothers wean within the first 12 months (`r round(sum(Feeding$AgeStopFeed <= 12, na.rm = TRUE) / nrow(Feeding), digits=2)`%) and only `r round(sum(Feeding$AgeStopFeed > 24, na.rm = TRUE) / nrow(Feeding), digits=2)`% takes longer than two years (although we can see a large variation by residence type, as only `r round(sum(Feeding$AgeStopFeed[which(Feeding$PMR=="Neo")] >24, na.rm = TRUE) / nrow(Feeding[which(Feeding$PMR=="Neo"),]), digits=2)`% of mothers in neolocal households breastfeed after this time). Note that values corresponding to yearly marks are much more frequent than expected at random. This can reflect a real phenomenon, i.e. children are more likely weaned at round years, because of cultural reasons, for example. But it is more likely that people tend to answer to uncertain, time-related questions with round numbers (a phenomenon known as age-heaping when the question is 'how old are you'). T least in part to deal with these issues, the data used for this analysis has been censored at XXX years (i.e. number of months up to XXX during which each child was breastfed, not exclusively). Moreover, some of the data is censored because of time of observation: a mother of a fifteen months old child reports she is still breastfeeding, but we have no information on how long that will last.  
+
+*Note: in the data I have, all data points after 12 months are marked as censored (status == 0, if I'm correct), and none before. Does this mean that there were no cases of 'censoring because the baby was still too young', or all focal children were older than one year? Or is this info incorrect?*
+
+```{r duration_data, fig.cap = "Duration of breastfeeding in our sample. Note the heaping at values corresponding to yearly marks.", fig.dim = c(10, 4)}
+par(mfrow = c(1,2), mgp = c(1.5, 0.5, 0), mar = c(2.5, 2.5, 2, 1) + 0.1)
+
+hist(Feeding$AgeStopFeed, main=NULL, xlab = "Breastfeeding duration in months", 60, col = "cornflowerblue", border = "cornflowerblue")
+plot(Feeding$AgeStopFeed, Feeding$kids, col = col_realhh, pch = 16, xlab = "duration in months", ylab = "child relatedness")
+
+```
+
+
+
+* Child relatedness: one of the main predictors, estimated genetic relatedness of the focal child to the rest of their household given the reported social relations (parents are on average 0.5 related to their children, grandparents 0.25 and so on; the relatedness for the parents is similarly calculated). We expect longer duration of breastfeeding the higher the average genetic relatedness to the household, under the assumption that in a more related household the interests of the child (longer duration of breastfeeding) count more.
+
+* Mother relatedness: see child relatedness for the calculation of this measure. The mother optimal breastfeeding duration is intermediate between that preferred by the child or the father, because breastfeeding is costly to her (hence preferred breastfeeding of mother < that of child), but she is more invested in each child, compared to the father, who might prefer her to stop breastfeeding and potentially start a new pregnancy (hence preferred breastfeeding of mother > that of father). Moreover, her decision-making concerning breastfeeding can be influenced by the opportunity cost, as in households more related to her she might more easily find replacement for the economic contribution to the household that is lost because of her breastfeeding. 
+
+* Father relatedness: see child relatedness for the calculation of this measure. Fathers' interests are likely pointing to a shorter duration of breastfeeding, as he is expected to have a preference for having another baby sooner than the mother's preference (breastfeeding inhibits the lutheal cycle thus rendering women temporarily infertile). 
+
+* Residence pattern: one between duolocal (each parent remains within their natal household, relatedness of the mother is highest, lowest for the father), matrilocal (the couple lives with the wife's family, relatedness is high for the child and mother, low for the father), neolocal (the couple lives in a new household, relatedness is lower and similar for mother and father, high for the child) or patrilocal (the couple lives with the husband's family, father and child have high relatedness, lowest for the mother). Residence type _causes_ relatedness patterns, thus should not be included in the analyses looking at the effect of relatedness. It is a helpful summary for the control model (looking at the effect of the other predictors), and a safety check, on top of yielding some interesting results per se. It is also a possible, however, that other characteristics of different household types influence breastfeeding directly (e.g. patrilocal households hold values that are consistent with shorter breastfeeding, independently from relatedness of the individuals). This can complicate inference.
+
+* Household size: we categorized household size into 3 different types (small, medium and big), based on how many family members were living together in the same household. Small household with <= 4 family members, medium with 5-8 family members, and big with >8 family members.  This classification is in line with the categorization that we used in another paper with the same demographic database (Chen et al 2023). 
+
+* Household wealth: higher household wealth is expected to be associated with longer breastfeeding if mothers' labour is needed in poorer households, or shorter if alternative food sources are a limiting factor for weaning. It's considered here as a possible concause, but not a confounder *Note: Ilaria, check this makes sense*
+
+* Birth order: birth order refers to the order of birth with the same mother in the family. In the paper we categorized it into 2 characters: 1st born and >=2nd born, because we only included any birth after 2010 for the breastfeeding information accuracy, and the time is after full implemented child policy, so we only have 4 births as 3rd birth and we thus included them as >=2nd birth. 
+
+* Child sex: the gender status of the child. We have two categories for this variable, daughter/female; son/male.
+
+* Mother age: the age of mother at the time of giving birth. We categorized in to 5 years age group:  <20, 20-25, > 25 years.
+
+* Mother cohort: this variables refers to the year of mother birth.  We categorized it into 10 years cohort:  <=1980,1980-1989 to >=1990.
+
+* Physical constraints: physical problems is one of the important reasons for terminating breastfeeding (Verronen, 1982; Page et al 2021), i.e. sore and cracked nipples, painful breasts and poor latching et al (Li et al., 2008) are commonly reported as important problems and act as a barrier to continued breastfeeding.  It’s considered here as a possible concause, but not a confounder.  
+
+
+|                               |      Zhaba            |      Lugu            |      Zhuoni            |      Maqu            |      Shangrila            |
+|-------------------------------|-----------------------|----------------------|------------------------|----------------------|---------------------------|
+|     **PMR**                   |                       |                      |                        |                      |                           |
+|        Duo                    |     98 (61.2%)        |     33 (39.3%)       |     0 (0.0%)           |     0 (0.0%)         |     0 (0.0%)              |
+|        Matri                  |     26 (16.2%)        |     10 (11.9%)       |     13 (19.1)          |     29 (28.7%)       |     33 (45.2%)            |
+|        Neo                    |     18 (11.2%)        |     18 (21.4%)       |     16 (23.5)          |     7 (6.9%)         |     14 (19.2%)            |
+|        Patri                  |     18 (11.2%)        |     23 (27.4%)       |     39 (57.4)          |     65 (64.4%)       |     26 (35.6%)            |
+|     **Birth Year**            |                       |                      |                        |                      |                           |
+|        <1980                  |     11 (6.9%)         |     6 (7.1%)         |     5 (7.4%)           |     3 (3.0%)         |     0 (0.0%)              |
+|     1980-1989                 |     39 (24.4%)        |     33 (39.3%)       |     32 (47.1)          |     49 (48.5%)       |     23 (31.5%)            |
+|        >=1990                 |     110 (68.8%)       |     45 (53.6%)       |     31 (45.6)          |     49 (48.5%)       |     50 (68.5%)            |
+|     **Age cohort**            |                       |                      |                        |                      |                           |
+|        <20                    |     39 (24.4%)        |     4 (4.8%)         |     11 (16.2)          |     16 (15.8%)       |     6 (8.2%)              |
+|        20-25                  |     76 (47.5%)        |     44 (52.4%)       |     35 (51.5)          |     67 (66.3%)       |     57 (78.1%)            |
+|        >25                    |     45 (28.1%)        |     36 (42.9%)       |     22 (32.4)          |     18 (17.8%)       |     10 (13.7%)            |
+|   **Birth order**             |                       |                      |                        |                      |                           |
+|        1st                    |     83 (51.9%)        |     27 (32.1%)       |     21 (30.9)          |     39 (38.6%)       |     51 (69.9%)            |
+|        2nd                    |     77 (48.1%)        |     57 (67.9%)       |     46 (67.6)          |     61 (60.4%)       |     22 (30.1%)            |
+|        3rd                    |     0 (0.0%)          |     0 (0.0%)         |     1 (1.5%)           |     1 (1.0%)         |     0 (0.0%)              |
+|   **House size**              |                       |                      |                        |                      |                           |
+|        Big                    |     51 (31.9%)        |     24 (28.6%)       |     23 (33.8)          |     30 (29.7%)       |     28 (38.4%)            |
+|        Medium                 |     100 (62.5%)       |     53 (63.1%)       |     44 (64.7)          |     43 (42.6%)       |     42 (57.5%)            |
+|        Small                  |     9 (5.6%)          |     7 (8.3%)         |     1 (1.5%)           |     28 (27.7%)       |     3 (4.1%)              |
+|   **Mother     relatedness**  |                       |                      |                        |                      |                           |
+|        Mean   (SD)            |     0.382 (0.106)     |     0.309(0.099)     |     0.217(0.105)       |     0.268 (0.102)    |     0.293(0.117)          |
+|        Range                  |     0.100 - 0.500     |     0.070 -0.500     |     0.060 - 0.550      |     0.070 - 0.500    |     0.050 - 0.420         |
+|   **Kids   relatedness**      |                       |                      |                        |                      |                           |
+|        Mean   (SD)            |     0.337 (0.081)     |     0.414(0.097)     |     0.325 (0.091)      |     0.388 (0.099)    |     0.347 (0.055)         |
+|        Range                  |     0.130 - 0.520     |     0.160 -0.500     |     0.160 - 0.550      |     0.130 - 0.500    |     0.200 - 0.500         |
+|   **Father   relatedness**    |                       |                      |                        |                      |                           |
+|        Mean   (SD)            |     0.147 (0.183)     |     0.271(0.159)     |     0.318 (0.137)      |     0.333 (0.082)    |     0.248 (0.124)         |
+|        Range                  |     0.000 - 0.650     |     0.000 -0.438     |     0.050 - 0.583      |     0.000 - 0.438    |     0.000 - 0.417         |
+|   **Mother to female**        |                       |                      |                        |                      |                           |
+|        Mean   (SD)            |     0.333 (0.090)     |     0.281(0.089)     |     0.192 (0.120)      |     0.216 (0.086)    |     0.265 (0.092)         |
+|        Range                  |     0.125 - 0.562     |     0.100 -0.500     |     0.000 - 0.400      |     0.062 - 0.375    |     0.100 - 0.500         |
+|   **Kid to     female**       |                       |                      |                        |                      |                           |
+|        Mean   (SD)            |     0.333 (0.092)     |     0.343(0.092)     |     0.322 (0.075)      |     0.282 (0.075)    |     0.301 (0.068)         |
+|        Range                  |     0.125 - 0.562     |     0.170 -0.500     |     0.208 - 0.500      |     0.071 - 0.417    |     0.188 - 0.500         |
+|   **Mother to     male**      |                       |                      |                        |                      |                           |
+|        Mean   (SD)            |     0.332 (0.165)     |     0.296(0.101)     |     0.217 (0.115)      |     0.214 (0.077)    |     0.271 (0.093)         |
+|        Range                  |     0.000 - 0.625     |     0.125 -0.500     |     0.000 - 0.500      |     0.071 - 0.450    |     0.083 - 0.375         |
+|   **Kid to     male**         |                       |                      |                        |                      |                           |
+|        Mean   (SD)            |     0.251 (0.147)     |     0.350(0.120)     |     0.331 (0.090)      |     0.276 (0.080)    |     0.302 (0.062)         |
+|        Range                  |     0.000 - 0.625     |     0.083 -0.500     |     0.062 - 0.531      |     0.100 - 0.575    |     0.214 - 0.417         |
+
+
+SI Table 2: Descriptive statistics by ethnic group.
+
+
+## Direct Acyclic Graph
+
+Figure \@ref(fig:dag) DESCRIBE CAUSAL STRATEGY. 
+
+```{r dag, fig.cap = "DAG illustrating the variables considered in our analysis and the causal connections between them. See the text for details.", fig.dim = c(5, 4)}
 DAG1 <- dagitty('dag {
 "birth order" [pos="1.3,-0.7"]
 "child relatedness" [exposure,pos="-0,1.5"]
@@ -108,44 +205,8 @@ DAG1 <- dagitty('dag {
 plot(DAG1)
 ```
 
-* Stop feeding: this is our outcome variable. It is coded as the time to end of breastfeeding censored at one year (i.e. number of months up to 12 during which each child was breastfed exclusively?) *Note: check this definition*
 
-```{r duration_data}
-
-hist(Feeding$time1, xlab = "breastfeeding duration in months")
-```
-*NOTE: I am actually a bit worried about this data: a third (`r round(sum(Feeding$status == 0)/558, digits=2)`%) of mothers breastfed for more than 12 months, and censoring at 12 not only seems a bit random, but also actually hides a big amount of variation. I don't remember, do we have access to this data, if we wanted to censor at, say, 2 years?* 
-
-
-* Child relatedness: one of the main predictors, estimated genetic relatedness of the focal child to the rest of their household given the reported social relations (parents are on average 0.5 related to their children, grandparents 0.25 and so on; the relatedness for the parents is similarly calculated). We expect longer duration of breastfeeding the higher the average genetic relatedness to the household, under the assumption that in a more related household the interests of the child (longer duration of breastfeeding) count more.
-
-* Mother relatedness: see child relatedness for the calculation of this measure. The mother optimal breastfeeding duration is intermediate between that preferred by the child or the father, because breastfeeding is costly to her (hence preferred breastfeeding of mother < that of child), but she is more invested in each child, compared to the father, who might prefer her to stop breastfeeding and potentially start a new pregnancy (hence preferred breastfeeding of mother > that of father). Moreover, her decision-making concerning breastfeeding can be influenced by the opportunity cost, as in households more related to her she might more easily find replacement for the economic contribution to the household that is lost because of her breastfeeding. 
-
-* Father relatedness: see child relatedness for the calculation of this measure. Fathers' interests are likely pointing to a shorter duration of breastfeeding, as he is expected to have a preference for having another baby sooner than the mother's preference (breastfeeding inhibits the lutheal cycle thus rendering women temporarily infertile). 
-
-<!-- Add here plot of genetic relatedness? -->
-
-
-* Residence pattern: one between duolocal (each parent remains within their natal household, relatedness of the mother is highest, lowest for the father), matrilocal (the couple lives with the wife's family, relatedness is high for the child and mother, low for the father), neolocal (the couple lives in a new household, relatedness is lower and similar for mother and father, high for the child) or patrilocal (the couple lives with the husband's family, father and child have high relatedness, lowest for the mother). Residence type _causes_ relatedness patterns, thus should not be included in the analyses looking at the effect of relatedness. It is a helpful summary for the control model (looking at the effect of the other predictors), and a safety check, on top of yielding some interesting results per se. It is also possible, however, that other characteristics of different household types influence breastfeeding directly (e.g. patrilocal households hold values that are consistent with shorter breastfeeding, independently from relatedness of the individuals). This can complicate inference. *Note: we can decide to do this later on, but let's think of an analysis to check on separate effect of ethnic group vs residence*
-
-* Household size: we categorized household size into 3 different types (small, medium and big), based on how many family members were living together in the same household. Small household with <= 4 family members, medium with 5-8 family members, and big with >8 family members.  This classification is in line with the categorization that we used in another paper with the same demographic database (Chen et al 2023). 
-
-* Household wealth: higher household wealth is expected to be associated with longer breastfeeding if mothers' labour is needed in poorer households, or shorter if alternative food sources are a limiting factor for weaning. It's considered here as a possible concause, but not a confounder *Note: Ilaria, check this makes sense*
-
-* Birth order: birth order refers to the order of birth with the same mother in the family. In the paper we categorized it into 2 characters: 1st born and >=2nd born, because we only included any birth after 2010 for the breastfeeding information accuracy, and the time is after full implemented child policy, so we only have 4 births as 3rd birth and we thus included them as >=2nd birth. 
-
-* Child sex:the gender status of the child. We have two categories for this variable, daughter/female; son/male. 
-
-* Mother age:the age of mother at the time of giving birth. We categorized in to 5 years age group:  <20, 20-25, > 25 years
-
-* Mother cohort:this variables refers to the year of mother birth.  We categorized it into 10 years cohort:  <=1980,1980-1989 to >=1990
-
-* Physical constraints: physical problems is one of the important reasons for terminating breastfeeding (Verronen, 1982; Page et al 2021), i.e. sore and cracked nipples, painful breasts and poor latching et al (Li et al., 2008) are commonly reported as important problems and act as a barrier to continued breastfeeding.  It’s considered here as a possible concause, but not a confounder.  
-
-
-
-2. How hypotheses match to causal structures
-<!--  (as mentioned before we prob need to sharpen this in the paper) -->
+## Hypotheses and causal models
 
 As mentioned before, hypotheses for which competing processes guide the duration of breastfeeding are associated to causal structures, i.e. directions in the effect of genetic relatedness of children and parents on duration. Because of the inevitable correlation of parent and offspring's relatedness, and because the predictions these hypotheses make are not fully opposite, making inference on which hypothesis best matches the data can be complicated. Here we review the main hypotheses, the expected directions of the effects and the reasons why it can be difficult to compare them, before moving on to simulation, testing and interpretation.
 
@@ -155,116 +216,193 @@ As mentioned before, hypotheses for which competing processes guide the duration
 
 This would result longer breastfeeding expected in households where the child has higher than average relatedness and shorter where the father has higher relatedness. However, intermediate duration is consistent with both scenarios, as we can see when we simulate them.
 
-## Approach
+|     Category             |     Neolocal    |     Patrilocal    |     Matrilocal    |
+|--------------------------|-----------------|-------------------|-------------------|
+|     physical costs       |     3 (19%)     |     2(14%)        |     2(14%)        |
+|     opportunity costs    |     5(31%)      |     8(57%)        |     3(21%)        |
+|     social norms         |     4(25%)      |     2(14%)        |     6(43%)        |
+|     others               |     4(25%)      |     2(14%)        |     3(21%)        |
 
- 1. Simulate (we match simulation to real data for comparability, even though it is not necessary)
- 
- We simulate N children and assign them to one of the four possible residence types (duolocal, matrilical, neolocal and patrilocal). We then generate for each child the relatedness of the mother, father and child itself. The relatedness of the parents is sampled from normal distributions that match the real data for the four residence types (means of 0.4, 0.36, 0.3 and 0.22 for the mothers and 0.6, 0.22, 0.30 and 0.38 for fathers respectively, with a standard deviation around 0.1). For children, instead, we generate a relatedness level by summing the parents' relatedness and dividing by two (as is the case because children share on average half of the genome of both parents) and add an arbitrary 0.1 which brings the generated distribution closer to the observed distribution for children's relatedness by household (see Figure \@ref(fig:simulate_relatedness)). *make plot matching real distribution of relatedness with simulated relatedness, improve plot*
- 
-```{r simulate_relatedness}
-#only child model
-
-#number of children in the sample with real data
-
-N <- 558
-
-household <- sample(1:4, N, replace = TRUE)
-
-col_hh <- ifelse(household == 1, "lightgreen", ifelse(household == 2, "indianred", ifelse(household == 3, "goldenrod", "lightblue")))
-
-#1 duolocal
-
-#2 matrilocal
-
-#3 neolocal
-
-#4 patrilocal
-
-#simulate relatedness
-
-mom_rel <- ifelse(household %in% c(1), rtruncnorm(n = N, a = 0.07, b = 0.50, mean = 0.40, sd = 0.09),
-            ifelse(household %in% c(2),rtruncnorm(n = N, a = 0.08, b = 0.55, mean = 0.36, sd = 0.09),
-              ifelse(household %in% c(3),rtruncnorm(n = N, a = 0.09, b = 0.50, mean = 0.30, sd = 0.10),
-                rtruncnorm(n = N, a = 0.05, b = 0.50,mean = 0.22, sd = 0.09))))
+SI Table 3: Coded reasons for weaning, split by three different post marital residence. 
 
 
 
-dad_rel <- ifelse(household %in% c(1), rtruncnorm(n = N, a = 0.00, b = 0.43, mean = 0.06, sd = 0.12),
-             ifelse(household %in% c(2),rtruncnorm(n = N, a = 0.00, b = 0.44, mean = 0.22, sd = 0.11),
-               ifelse(household %in% c(3),rtruncnorm(n = N, a = 0.00, b = 0.50, mean = 0.30, sd = 0.13),
-                 rtruncnorm(n = N, a = 0.25, b = 0.65, mean = 0.38, sd = 0.08))))
+# Approach
 
+## Simulate 
+(we match simulation to real data for comparability, even though it is not necessary)
 
+```{r sim_function}
+#function to simulate breastfeeding data
+#note that the function needs a set of average relatednesses for the parents in each residence type (relatedness_averages), and a set of parameters for the poisson simulation (one value per each of four parameters for each considered hypothesis, within the list poiss_parameters)
+#note that the function has the option to return the full set of data and model results, or only the coefficients estimated by the cox models
+# note that there (WILL BE) the option to test with censoring
+sim_breastfeeding <- function (N, relatedness_avg = relatedness_averages, poiss_pars = poiss_parameters, n_hyp = ncol(poiss_parameters), censor = FALSE, censor_at = 12, coefficients = FALSE ){
+  #generate household types and assign color
+  #1 duolocal
+  #2 matrilocal
+  #3 neolocal
+  #4 patrilocal
+  household <- sample(1:4, N, replace = TRUE)
+  col_hh <- ifelse(household == 1, "lightgreen", ifelse(household == 2, "coral", ifelse(household == 3, "goldenrod", "lightblue")))
+  
+  #generate relatednesses 
+  mom_rel <- ifelse(household == 1, rtruncnorm(n = N, a = 0.07, b = 0.50, mean = relatedness_avg$mom[1], sd = 0.09),
+                    ifelse(household == 2,rtruncnorm(n = N, a = 0.08, b = 0.55, mean = relatedness_avg$mom[2], sd = 0.09),
+                           ifelse(household == 3,rtruncnorm(n = N, a = 0.09, b = 0.50, mean = relatedness_avg$mom[3], sd = 0.10),
+                                  rtruncnorm(n = N, a = 0.05, b = 0.50,mean = relatedness_avg$mom[4], sd = 0.09))))
+  
+  
+  dad_rel <- ifelse(household == 1, rtruncnorm(n = N, a = 0.00, b = 0.43, mean = relatedness_avg$dad[1], sd = 0.12),
+              ifelse(household == 2,rtruncnorm(n = N, a = 0.00, b = 0.44, mean = relatedness_avg$dad[2], sd = 0.11),
+               ifelse(household == 3,rtruncnorm(n = N, a = 0.00, b = 0.50, mean = relatedness_avg$dad[3], sd = 0.13),
+                                  rtruncnorm(n = N, a = 0.25, b = 0.65, mean = relatedness_avg$dad[4], sd = 0.08))))
+  
+  child_rel <- (mom_rel + dad_rel)/2 + 0.1
+  
+  #generate duration of breastfeeding from poisson distribution
+  poiss_rate <- matrix(nrow = N, ncol = n_hyp)
+  duration <- matrix(nrow = N, ncol = n_hyp)
+  status <- matrix(nrow = N, ncol = n_hyp)
+  for (i in 1:n_hyp){
+    poiss_rate[,i] <- exp( rnorm(N, poiss_pars[1,i], 0.2) + child_rel * poiss_pars[2,i] + mom_rel * poiss_pars[3,i] + dad_rel * poiss_pars[4,i])
+  
+    duration[,i] <- rpois(N, poiss_rate[,i]) 
+  
+    #generate status (i.e. whether data is censored)
+    if(censor == FALSE) {
+      status[,i] <-  rep(1, N)} else {
+        status[,i] <- ifelse(duration[,i] > censor_at, 0, 1) }
 
-child_real_rel <- ifelse(household %in% c(1), rtruncnorm(n = N, a = 0.16, b = 0.50, mean = 0.31, sd = 0.08),
-                 ifelse(household %in% c(2),rtruncnorm(n = N, a = 0.16, b = 0.55, mean = 0.38, sd = 0.09),
-                     ifelse(household %in% c(3),rtruncnorm(n = N, a = 0.17, b = 0.50, mean = 0.40, sd = 0.10),
-                        rtruncnorm(n = N, a = 0.13, b = 0.50, mean = 0.38, sd = 0.08))))
-child_rel <- (mom_rel + dad_rel)/2 + 0.1
-hist(child_real_rel)
-hist(child_rel, add = TRUE, col = col.alpha("blue", 0.4))
+        #censor to twelve months
+    if(censor == TRUE){
+      duration[,i] <- ifelse(duration[,i] >= censor_at, censor_at, duration[,i])
+    }#if censor
+  }#generate durations
 
+  #run cox models
+  child_sim <- list()
+  mother_sim <- list()
+  father_sim <- list()
+  parents_sim <- list()
+  all_sim <- list()
+  residence_sim <- list()
+
+  for( i in 1:n_hyp){
+    child_sim[[i]] <- coxph(Surv(duration[,i], status[,i]) ~ child_rel)
+    mother_sim[[i]] <- coxph(Surv(duration[,i], status[,i]) ~ mom_rel)
+    father_sim[[i]] <- coxph(Surv(duration[,i], status[,i]) ~ dad_rel)
+    parents_sim[[i]] <- coxph(Surv(duration[,i], status[,i]) ~ mom_rel + dad_rel)
+    all_sim[[i]] <- coxph(Surv(duration[,i], status[,i]) ~ child_rel + mom_rel + dad_rel)
+    residence_sim[[i]] <- coxph(Surv(duration[,i], status[,i])~as.factor(household))
+    
+  }#run cox model
+  
+  #prepare data
+  #if we want all data output (coefficients is FALSE)
+  breastfeeding_data <- list(N = N,
+                             household = household,
+                             col_hh = col_hh,
+                             mom_rel = mom_rel,
+                             dad_rel = dad_rel,
+                             child_rel = child_rel,
+                             poiss_rate = poiss_rate,
+                             duration = duration,
+                             status = status,
+                             child_sim = child_sim,
+                             mother_sim = mother_sim,
+                             father_sim = father_sim,
+                             parents_sim = parents_sim,
+                             all_sim = all_sim,
+                             residence_sim = residence_sim
+                             )
+  #if we want only the coefficients (for plotting, coefficients is TRUE)
+  breastfeeding_coefficients <- list(child  = child_sim |> map("coefficients"), 
+                                     mother = mother_sim |> map("coefficients"),
+                                     father = father_sim |> map("coefficients"),
+                                     parents = parents_sim |> map("coefficients"),
+                                     all = all_sim |> map("coefficients"),
+                                     residence = residence_sim |> map("coefficients"))
+  #decide output (data or coefficients)
+  if(coefficients == TRUE){
+    return( breastfeeding_coefficients )
+  } else {
+    return( breastfeeding_data ) 
+  }
+  
+}
 ```
  
- * Generate simulated duration from Poisson distribution with different causal models *(will experiment with censoring soon to match real data)*
+We simulate N children and assign them to one of the four possible residence types (duolocal, matrilical, neolocal and patrilocal). We then generate for each child the relatedness of the mother, father and child itself. The relatedness of the parents is sampled from normal distributions that match the real data for the four residence types (means of 0.4, 0.36, 0.3 and 0.22 for the mothers and 0.6, 0.22, 0.30 and 0.38 for fathers respectively, with a standard deviation around 0.1). For children, instead, we generate a relatedness level by summing the parents' relatedness and dividing by two (as is the case because children share on average half of the genome of both parents) and add an arbitrary 0.1 which brings the generated distribution closer to the observed distribution for children's relatedness by household (see Figure \@ref(fig:simulate_relatedness)). *make plot matching real distribution of relatedness with simulated relatedness, improve plot, add table with source distributions of parents' relatedness/plot of distribution to be compared to the plot in the main text*
+ 
+```{r simulate_relatedness, fig.cap = "Real distribution of relatedness (grey) and simulated relatedness (blue).", fig.dim = c(5, 4)}
+#define average relatedness for parents
+#the followinf is based on real data
+relatedness_averages <- data.frame(mom = c(0.4, 0.36, 0.3, 0.22 ),
+                              dad = c(0.06, 0.22, 0.3, 0.38))
+#define coefficients for each hypothesis (see below for explanation on the coefficients)
+n_hypotheses <- 4
+poiss_parameters <- matrix(c( 3,  5,-5,-5, #H1
+                             0.7, 0, 5,-5, #H2
+                             -2.5,10,5,-5, #H3
+                             0.2, 5, 0, 0),#H4
+                     nrow = 4, ncol = n_hypotheses, byrow = FALSE,
+                     dimnames = list(c("intercept", "child", "mom", "dad"),
+                                     c(paste(rep("H", n_hypotheses), 1:n_hypotheses, sep = ""))))
+#simulates breastfeeding data and model results for four different hypotheses
+bf <- sim_breastfeeding(N = 558)
+
+
+
+child_real_rel <- ifelse(bf$household %in% c(1), rtruncnorm(n = bf$N, a = 0.16, b = 0.50, mean = 0.31, sd = 0.08),
+                 ifelse(bf$household %in% c(2),rtruncnorm(n = bf$N, a = 0.16, b = 0.55, mean = 0.38, sd = 0.09),
+                     ifelse(bf$household %in% c(3),rtruncnorm(n = bf$N, a = 0.17, b = 0.50, mean = 0.40, sd = 0.10),
+                        rtruncnorm(n = bf$N, a = 0.13, b = 0.50, mean = 0.38, sd = 0.08))))
+
+par(mgp = c(1.5, 0.5, 0), mar = c(2.5, 2.5, 2, 1) + 0.1)
+hist(child_real_rel, border = "lightgrey", main = NULL, ylim = c(0,bf$N/3), xlab = "child relatedness")
+hist(bf$child_rel, add = TRUE, col = col.alpha("cornflowerblue", 0.4), border = col.alpha("cornflowerblue", 0.4))
+legend(0.15, bf$N/4, c("real", "simulated"), fill = c("lightgrey", col.alpha("cornflowerblue", 0.4)), border = c("lightgrey", col.alpha("cornflowerblue", 0.4), box.col = "white")
+)
+```
+ 
+## Generate simulated duration from Poisson distribution with different causal models 
+*(will experiment with censoring soon to match real data)*
  
  We then generate duration of breastfeeding from these genetic relatedness (simulated) data depending on the two main alternative hypotheses and possible other scenarios. These can be summarized as:
  
  <!-- Causal models = causal structure + parameters -->
  
- - A: Parent-offspring conflict: child +, both parents -
- - B: Gender conflict: child 0, mother +, father -
- - C: Combination of hypotheses: child ++, mother +, father -
- - D: No effect of parents: child +, both parents 0
+|   | Hypothesis                 | Child | Mother | Father |
+|---|----------------------------|:-----:|:------:|:------:|
+| A | Parents-offspring conflict |   +   |    -   |    -   |
+| B | Gender conflict            |   0   |    +   |    -   |
+| C | Both                       |   ++  |    +   |    -   |
+| D | No effect of parents       |   +   |    0   |    0   |
  
- The plot below shows simulated duration of breastfeeding according to the parameters associated to the causal models above. The points are colored depending on household type. 
+
+The plot below shows simulated duration of breastfeeding according to the parameters associated to the causal models above. The points are colored depending on household type. 
  
 ```{r simulate_breastfeeding}
-poiss_rate_A <- exp( rnorm(N, 3, 0.2) + child_rel * 5 + mom_rel * -5 + dad_rel * -5)
-poiss_rate_B <- exp( rnorm(N, 0.7, 0.2) + child_rel * 0 + mom_rel * 5 + dad_rel * -5)
-poiss_rate_C <- exp( rnorm(N, -2.5, 0.2) + child_rel * 10 + mom_rel * 5 + dad_rel * -5)
-poiss_rate_D <- exp( rnorm(N, 0.2, 0.2) + child_rel * 5 + mom_rel * 0 + dad_rel * 0)
-
- 
-duration_A <- rpois(N, poiss_rate_A)
-duration_B <- rpois(N, poiss_rate_B)
-duration_C <- rpois(N, poiss_rate_C)
-duration_D <- rpois(N, poiss_rate_D)
 
 par(mfrow = c(2,2),mgp = c(1.5, 0.5, 0), mar = c(2.5, 2.5, 2, 1) + 0.1)
-plot(duration_A, child_rel, col = col_hh, pch = 16, xlab = "duration - A", ylab = "child relatedness")
-plot(duration_B, child_rel, col = col_hh, pch = 16, xlab = "duration - B", ylab = "child relatedness")
-plot(duration_C, child_rel, col = col_hh, pch = 16, xlab = "duration - C", ylab = "child relatedness")
-plot(duration_D, child_rel, col = col_hh, pch = 16, xlab = "duration - D", ylab = "child relatedness")
+for(i in 1:n_hypotheses){
+        plot(bf$duration[,i], bf$child_rel, col = bf$col_hh, pch = 16, xlab = paste("duration - H", i, sep = ""), ylab = "child relatedness")
+}
+legend(20, 0.32, c("Duolocal", "Matrilocal", "Neolocal",  "Patrilocal"), fill = c("lightgreen", "coral", "goldenrod","lightblue"), border = c("lightgreen", "coral", "goldenrod","lightblue"), box.col = "white")
 
-#duration_A_cens <- ifelse(duration_A >= 12, 12, duration_A)
-#duration_B_cens <- ifelse(duration_B >= 12, 12, duration_B)
-#duration_C_cens <- ifelse(duration_C >= 12, 12, duration_C)
-#duration_D_cens <- ifelse(duration_D >= 12, 12, duration_D)
 
-#status_A <-ifelse(duration_A > 12, 0, 1)
-#status_B <-ifelse(duration_B > 12, 0, 1)
-#status_C <-ifelse(duration_C > 12, 0, 1)
-#status_D <-ifelse(duration_D > 12, 0, 1)
-
-#sum(duration_A == 12)/length(duration_A)
-#sum(duration_B == 12)/length(duration_B)
-#sum(duration_C == 12)/length(duration_C)
-#sum(duration_D == 12)/length(duration_D)
-
-#par(mfrow = c(2,2),mgp = c(1.5, 0.5, 0), mar = c(2.5, 2.5, 2, 1) + 0.1)
-#plot(Feeding$time1, Feeding$kids, col = col_hh, pch = 16, xlab = "duration", ylab = "child relatedness")
-#plot(Feeding$time1, Feeding$mother, col = col_hh, pch = 16, xlab = "duration", ylab = "mother relatedness")
-#plot(Feeding$time1, Feeding$father, col = col_hh, pch = 16, xlab = "duration", ylab = "father relatedness")
 
 ```
  <!-- Maybe add separate effect of household type -->
 
-3. Test multiple models on different causal structures and observe how they are able to get info from data (which guides our ability to make inferences)
+## Test multiple models on different causal structures and observe how they are able to get info from data (which guides our ability to make inferences)
 
 After simulating the datasets according to causal models (A to D), we test several linear regressions that include children's, parents' and a combination of their relatednesses as predictors. We can then qualitatively compare how the predictions of the cox models applied to simulated data from different causal structures match the predictions of similar cox models applied to the real data. This should give us some indication on how is the 'real' causal structure in the real world. 
 
 *Note: we need to try different parameter structures (which are entered here from line 219 to 222, or as parameters of the function for the simulation in the simulate_breastfeeding script) and see how the parameters estimated from the real data match to differences in the simulation processes. We want to find the causal structure (positive and negative effects for individual's relatedness in the simulation for the poisson rate, see simulation code above). The following chunk produces plots that can be very helpful to get an idea of which combination of parameters matches the real data, so feel free to play with it!*
+
+*Add legend and explain extensively approach and results*
 
 ```{r test_cox}
 #####seperate model
@@ -282,52 +420,122 @@ parents_real <- coxme(Surv(time,status)~mom+father+sex+size+order+age+BirthPerio
                 ,data = Feeding) 
 all_real <- coxme( Surv( time, status) ~ kid + mom + father + sex + size + order + age + BirthPeriod +  (1|Village/ITID), data = Feeding)
 
-#add one simulation
-status_sim <- rep(1, N)
-child_A <- coxph(Surv(duration_A, status_sim)~child_rel) 
-child_B <- coxph(Surv(duration_B, status_sim)~child_rel) 
-child_C <- coxph(Surv(duration_C, status_sim)~child_rel) 
-child_D <- coxph(Surv(duration_D, status_sim)~child_rel) 
-
-mother_A <- coxph(Surv(duration_A, status_sim)~mom_rel)
-mother_B <- coxph(Surv(duration_B, status_sim)~mom_rel)
-mother_C <- coxph(Surv(duration_C, status_sim)~mom_rel)
-mother_D <- coxph(Surv(duration_D, status_sim)~mom_rel)
-
-father_A <- coxph(Surv(duration_A, status_sim)~dad_rel)
-father_B <- coxph(Surv(duration_B, status_sim)~dad_rel)
-father_C <- coxph(Surv(duration_C, status_sim)~dad_rel)
-father_D <- coxph(Surv(duration_D, status_sim)~dad_rel)
-
-parents_A <- coxph(Surv(duration_A, status_sim)~mom_rel + dad_rel)
-parents_B <- coxph(Surv(duration_B, status_sim)~mom_rel + dad_rel)
-parents_C <- coxph(Surv(duration_C, status_sim)~mom_rel + dad_rel)
-parents_D <- coxph(Surv(duration_D, status_sim)~mom_rel + dad_rel)
-
-all_A <- coxph(Surv(duration_A, status_sim)~ child_rel + mom_rel + dad_rel)
-all_B <- coxph(Surv(duration_B, status_sim)~ child_rel + mom_rel + dad_rel)
-all_C <- coxph(Surv(duration_C, status_sim)~ child_rel + mom_rel + dad_rel)
-all_D <- coxph(Surv(duration_D, status_sim)~ child_rel + mom_rel + dad_rel)
-
-residence_A <- coxph(Surv(duration_A, status_sim)~as.factor(household))
-residence_B <- coxph(Surv(duration_B, status_sim)~as.factor(household))
-residence_C <- coxph(Surv(duration_C, status_sim)~as.factor(household))
-residence_D <- coxph(Surv(duration_D, status_sim)~as.factor(household))
-
-
+#plots simulation
 par(mfrow = c(3,2),mgp = c(1.5, 0.5, 0), mar = c(2.5, 2.5, 2, 1) + 0.1)
-plot(c(child_A$coefficients, child_B$coefficients, child_C$coefficients, child_D$coefficients, child_real$coefficients[1]),1:5, pch = 16, xlab = "coefficient child relatedness", ylab = "causal model" )
-text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
-plot(c(mother_A$coefficients, mother_B$coefficients, mother_C$coefficients, mother_D$coefficients, mother_real$coefficients[1]),1:5, pch = 16, xlab = "coefficient mother relatedness", ylab = "causal model")
-text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
-plot(c(father_A$coefficients, father_B$coefficients, father_C$coefficients, father_D$coefficients, father_real$coefficients[1]),1:5, pch = 16, xlab = "coefficient father relatedness", ylab = "causal model")
-text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
-plot(c(parents_A$coefficients, parents_B$coefficients, parents_C$coefficients, parents_D$coefficients, parents_real$coefficients[1:2]),rep(1:5, each = 2), pch = 16, xlab = "coefficient parents relatedness", ylab = "causal model", col = c("darkred", "darkblue"))
-text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
-plot(c(all_A$coefficients, all_B$coefficients, all_C$coefficients, all_D$coefficients, all_real$coefficients[1:3]),rep(1:5, each = 3), pch = 16, xlab = "coefficient child and parents relatedness", ylab = "causal model", col = c("darkgreen","darkred", "darkblue"))
-text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
-plot(c(residence_A$coefficients, residence_B$coefficients, residence_C$coefficients, residence_D$coefficients, residence_real$coefficients[1:3]),rep(1:5, each = 3), pch = 16, xlab = "coefficient household type relatedness", ylab = "causal model", col = c("indianred", "goldenrod", "lightblue"))
-text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
+#child only model
+plot(c(bf$child_sim[[1]]$coefficients, bf$child_sim[[2]]$coefficients, bf$child_sim[[3]]$coefficients, bf$child_sim[[4]]$coefficients),1:4, pch = 16, cex = 2, col = col.alpha("grey40", 0.8), xlab = "coefficient child relatedness", ylab = "hypotheses", yaxt = "n" , ylim = c(0.5, 4.5))
+abline( v = 0 , col = "grey80")
+axis(2, at = 1:4, las=1,
+     labels =  c("H1", "H2", "H3", "H4"))
+par_value <- rtruncnorm(50, 0, mean = 4)
+for (i in 1:length(par_value)) {
+        many_poiss_par <- matrix(c( 3,  par_value[i],-par_value[i],-par_value[i], #H1
+                             0.7, 0, par_value[i],-par_value[i], #H2
+                             -2.5, 2*par_value[i],par_value[i],-par_value[i], #H3
+                             0.2, par_value[i], 0, 0),#H4
+                     nrow = 4, ncol = n_hypotheses, byrow = FALSE)
+        coeffs <- sim_breastfeeding(100, coefficients = TRUE, poiss_pars = many_poiss_par)
+        points(c(coeffs$child[1], coeffs$child[2], coeffs$child[3], coeffs$child[4]),1:4, pch = 16, col = col.alpha("grey40", 0.3))
+}
+points(rep(child_real$coefficients[1], 4),1:4, pch = 16, cex = 2, col = col.alpha("cornflowerblue", 0.8))
+
+#mother
+plot(c(bf$mother_sim[[1]]$coefficients, bf$mother_sim[[2]]$coefficients, bf$mother_sim[[3]]$coefficients, bf$mother_sim[[4]]$coefficients),1:4, pch = 16, cex = 2, col = col.alpha("grey40", 0.8), xlab = "coefficient mother relatedness", ylab = "hypotheses", yaxt = "n" , ylim = c(0.5, 4.5))
+abline( v = 0 , col = "grey80")
+axis(2, at = 1:4, las=1,
+     labels =  c("H1", "H2", "H3", "H4"))
+par_value <- rtruncnorm(50, 0, mean = 4)
+for (i in 1:length(par_value)) {
+        many_poiss_par <- matrix(c( 3,  par_value[i],-par_value[i],-par_value[i], #H1
+                             0.7, 0, par_value[i],-par_value[i], #H2
+                             -2.5, 2*par_value[i],par_value[i],-par_value[i], #H3
+                             0.2, par_value[i], 0, 0),#H4
+                     nrow = 4, ncol = n_hypotheses, byrow = FALSE)
+        coeffs <- sim_breastfeeding(100, coefficients = TRUE, poiss_pars = many_poiss_par)
+        points(c(coeffs$mother[1], coeffs$mother[2], coeffs$mother[3], coeffs$mother[4]),1:4, pch = 16, col = col.alpha("grey40", 0.3))
+}
+points(rep(mother_real$coefficients[1], 4),1:4, pch = 16, cex = 2, col = col.alpha("cornflowerblue", 0.8))
+
+#father
+plot(c(bf$father_sim[[1]]$coefficients, bf$father_sim[[2]]$coefficients, bf$father_sim[[3]]$coefficients, bf$father_sim[[4]]$coefficients),1:4, pch = 16, cex = 2, col = col.alpha("grey40", 0.8), xlab = "coefficient father relatedness", ylab = "hypotheses", yaxt = "n" , ylim = c(0.5, 4.5))
+abline( v = 0 , col = "grey80")
+axis(2, at = 1:4, las=1,
+     labels =  c("H1", "H2", "H3", "H4"))
+par_value <- rtruncnorm(50, 0, mean = 4)
+for (i in 1:length(par_value)) {
+        many_poiss_par <- matrix(c( 3,  par_value[i],-par_value[i],-par_value[i], #H1
+                             0.7, 0, par_value[i],-par_value[i], #H2
+                             -2.5, 2*par_value[i],par_value[i],-par_value[i], #H3
+                             0.2, par_value[i], 0, 0),#H4
+                     nrow = 4, ncol = n_hypotheses, byrow = FALSE)
+        coeffs <- sim_breastfeeding(100, coefficients = TRUE, poiss_pars = many_poiss_par)
+        points(c(coeffs$father[1], coeffs$father[2], coeffs$father[3], coeffs$father[4]),1:4, pch = 16, col = col.alpha("grey40", 0.3))
+}
+points(rep(father_real$coefficients[1], 4),1:4, pch = 16, cex = 2, col = col.alpha("cornflowerblue", 0.8))
+
+#both parents
+plot(c(bf$parents_sim[[1]]$coefficients, bf$parents_sim[[2]]$coefficients, bf$parents_sim[[3]]$coefficients, bf$parents_sim[[4]]$coefficients),rep(1:4, each = 2), pch = 16, cex = 2, col = c("darkred", "darkblue"), xlab = "coefficient parents relatedness", ylab = "hypotheses", yaxt = "n" , ylim = c(0.5, 4.5))
+abline( v = 0 , col = "grey80")
+axis(2, at = 1:4, las=1,
+     labels =  c("H1", "H2", "H3", "H4"))
+par_value <- rtruncnorm(50, 0, mean = 4)
+for (i in 1:length(par_value)) {
+        many_poiss_par <- matrix(c( 3,  par_value[i],-par_value[i],-par_value[i], #H1
+                             0.7, 0, par_value[i],-par_value[i], #H2
+                             -2.5, 2*par_value[i],par_value[i],-par_value[i], #H3
+                             0.2, par_value[i], 0, 0),#H4
+                     nrow = 4, ncol = n_hypotheses, byrow = FALSE)
+        coeffs <- sim_breastfeeding(100, coefficients = TRUE, poiss_pars = many_poiss_par)
+        points(unlist(c(coeffs$parents[1], coeffs$parents[2], coeffs$parents[3], coeffs$parents[4])),rep(1:4, each = 2), pch = 16, col = adjustcolor(c("darkred", "darkblue"), alpha.f=0.4))
+}
+points(rep(parents_real$coefficients[1:2], 4),rep(1:4, each = 2), pch = 16, cex = 2, col = c("indianred", "cornflowerblue"))
+
+#all family members
+plot(c(bf$all_sim[[1]]$coefficients, bf$all_sim[[2]]$coefficients, bf$all_sim[[3]]$coefficients, bf$all_sim[[4]]$coefficients),rep(1:4, each = 3), pch = 16, cex = 2, col = c("darkgreen", "darkred", "darkblue"), xlab = "coefficient relatedness by family member", ylab = "hypotheses", yaxt = "n" , ylim = c(0.5, 4.5))
+abline( v = 0 , col = "grey80")
+axis(2, at = 1:4, las=1,
+     labels =  c("H1", "H2", "H3", "H4"))
+par_value <- rtruncnorm(50, 0, mean = 4)
+for (i in 1:length(par_value)) {
+        many_poiss_par <- matrix(c( 3,  par_value[i],-par_value[i],-par_value[i], #H1
+                             0.7, 0, par_value[i],-par_value[i], #H2
+                             -2.5, 2*par_value[i],par_value[i],-par_value[i], #H3
+                             0.2, par_value[i], 0, 0),#H4
+                     nrow = 4, ncol = n_hypotheses, byrow = FALSE)
+        coeffs <- sim_breastfeeding(100, coefficients = TRUE, poiss_pars = many_poiss_par)
+        points(unlist(c(coeffs$all[1], coeffs$all[2], coeffs$all[3], coeffs$all[4])),rep(1:4, each = 3), pch = 16, col = adjustcolor(c("darkgreen","darkred", "darkblue"), alpha.f=0.4))
+}
+points(rep(all_real$coefficients[1:3], 4),rep(1:4, each = 3), pch = 16, cex = 2, col = c("lightgreen","indianred", "cornflowerblue"))
+
+#residence type
+plot(c(bf$residence_sim[[1]]$coefficients, bf$residence_sim[[2]]$coefficients, bf$residence_sim[[3]]$coefficients, bf$residence_sim[[4]]$coefficients),c(1:4 - 0.1, 1:4, 1.1:4.1), pch = 16, cex = 2, col = c("darkred","darkorange", "darkblue"), xlab = "coefficient relatedness by residence type", ylab = "hypotheses", yaxt = "n" , ylim = c(0.5, 4.5))
+abline( v = 0 , col = "grey80")
+axis(2, at = 1:4, las=1,
+     labels =  c("H1", "H2", "H3", "H4"))
+par_value <- rtruncnorm(50, 0, mean = 4)
+for (i in 1:length(par_value)) {
+        many_poiss_par <- matrix(c( 3,  par_value[i],-par_value[i],-par_value[i], #H1
+                             0.7, 0, par_value[i],-par_value[i], #H2
+                             -2.5, 2*par_value[i],par_value[i],-par_value[i], #H3
+                             0.2, par_value[i], 0, 0),#H4
+                     nrow = 4, ncol = n_hypotheses, byrow = FALSE)
+        coeffs <- sim_breastfeeding(100, coefficients = TRUE, poiss_pars = many_poiss_par)
+        points(unlist(c(coeffs$residence[1], coeffs$residence[2], coeffs$residence[3], coeffs$residence[4])),c(1:4 - 0.1, 1:4, 1.1:4.1), pch = 16, col = adjustcolor(c("darkred","darkorange", "darkblue"), alpha.f=0.4))
+}
+points(rep(residence_real$coefficients[1:3], 4),c(1:4 - 0.1, 1:4, 1.1:4.1), pch = 16, cex = 2, col = c("indianred", "goldenrod", "lightblue"))
+
+# plot(c(child_A$coefficients, child_B$coefficients, child_C$coefficients, child_D$coefficients, child_real$coefficients[1]),1:5, pch = 16, xlab = "coefficient child relatedness", ylab = "causal model" )
+# text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
+# plot(c(mother_A$coefficients, mother_B$coefficients, mother_C$coefficients, mother_D$coefficients, mother_real$coefficients[1]),1:5, pch = 16, xlab = "coefficient mother relatedness", ylab = "causal model")
+# text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
+# plot(c(father_A$coefficients, father_B$coefficients, father_C$coefficients, father_D$coefficients, father_real$coefficients[1]),1:5, pch = 16, xlab = "coefficient father relatedness", ylab = "causal model")
+# text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
+# plot(c(parents_A$coefficients, parents_B$coefficients, parents_C$coefficients, parents_D$coefficients, parents_real$coefficients[1:2]),rep(1:5, each = 2), pch = 16, xlab = "coefficient parents relatedness", ylab = "causal model", col = c("darkred", "darkblue"))
+# text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
+# plot(c(all_A$coefficients, all_B$coefficients, all_C$coefficients, all_D$coefficients, all_real$coefficients[1:3]),rep(1:5, each = 3), pch = 16, xlab = "coefficient child and parents relatedness", ylab = "causal model", col = c("darkgreen","darkred", "darkblue"))
+# text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
+# plot(c(residence_A$coefficients, residence_B$coefficients, residence_C$coefficients, residence_D$coefficients, residence_real$coefficients[1:3]),rep(1:5, each = 3), pch = 16, xlab = "coefficient household type relatedness", ylab = "causal model", col = c("indianred", "goldenrod", "lightblue"))
+# text(0 ,1:5, labels = c("A", "B", "C", "D", "real"))
 
 ```
 
