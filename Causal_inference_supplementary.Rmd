@@ -132,15 +132,15 @@ hist(Feeding$time1, xlab = "breastfeeding duration in months")
 
 * Household wealth: higher household wealth is expected to be associated with longer breastfeeding if mothers' labour is needed in poorer households, or shorter if alternative food sources are a limiting factor for weaning. It's considered here as a possible concause, but not a confounder *Note: Ilaria, check this makes sense*
 
-* Birth order: 
+* Birth order: birth order refers to the order of birth with the same mother in the family. In the paper we categorized it into 2 characters: 1st born and >=2nd born, because we only included any birth after 2010 for the breastfeeding information accuracy, and the time is after full implemented child policy, so we only have 4 births as 3rd birth and we thus included them as >=2nd birth. 
 
-* Child sex:
+* Child sex:the gender status of the child. We have two categories for this variable, daughter/female; son/male. 
 
-* Mother age:
+* Mother age:the age of mother at the time of giving birth. We categorized in to 5 years age group:  <20, 20-25, > 25 years
 
-* Mother cohort:
+* Mother cohort:this variables refers to the year of mother birth.  We categorized it into 10 years cohort:  <=1980,1980-1989 to >=1990
 
-* Physical constraints:
+* Physical constraints: physical problems is one of the important reasons for terminating breastfeeding (Verronen, 1982; Page et al 2021), i.e. sore and cracked nipples, painful breasts and poor latching et al (Li et al., 2008) are commonly reported as important problems and act as a barrier to continued breastfeeding.  It’s considered here as a possible concause, but not a confounder.  
 
 
 
