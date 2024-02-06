@@ -205,6 +205,7 @@ DAG1 <- dagitty('dag {
 plot(DAG1)
 ```
 
+
 ## Hypotheses and causal models
 
 As mentioned before, hypotheses for which competing processes guide the duration of breastfeeding are associated to causal structures, i.e. directions in the effect of genetic relatedness of children and parents on duration. Because of the inevitable correlation of parent and offspring's relatedness, and because the predictions these hypotheses make are not fully opposite, making inference on which hypothesis best matches the data can be complicated. Here we review the main hypotheses, the expected directions of the effects and the reasons why it can be difficult to compare them, before moving on to simulation, testing and interpretation.
