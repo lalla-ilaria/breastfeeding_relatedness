@@ -236,15 +236,13 @@ DAG1 <- dagitty('dag {
 "birth order" [pos="1.3,-0.7"]
 "child relatedness" [exposure,pos="-0,1.5"]
 "child sex" [pos="1,-1.3"]
-"father relatedness" [pos="1,1.3"]
-"household size" [pos="-1.7,0.5"]
-"household wealth" [pos="1.5,0"]
-"mother age" [pos="-0,-1.5"]
-"mother cohort" [pos="-1.,-1.3"]
-"mother relatedness" [pos="-1,1.3"]
-"physical constraints" [pos="1.3,0.7"]
-"village" [pos="-1.3,-0.7"]
-"residence pattern" [pos="-1.5,0"]
+"father relatedness" [pos="0.8,0.8"]
+"household size" [pos="-1.5,0"]
+"U" [pos="1.5,0"]
+"mother cohort" [pos="-0,-1.5"]
+"mother relatedness" [pos="-0.8,0.8"]
+"village" [pos="-1,-1.3"]
+"residence pattern" [pos="-1.3,-0.7"]
 "stop feeding" [outcome,pos="-0,-0"]
 "birth order" -> "stop feeding"
 "child relatedness" -> "stop feeding"
@@ -253,17 +251,12 @@ DAG1 <- dagitty('dag {
 "father relatedness" -> "stop feeding"
 "household size" -> "child relatedness"
 "household size" -> "father relatedness"
-"household size" -> "household wealth"
 "household size" -> "mother relatedness"
 "household size" -> "stop feeding"
-"household wealth" -> "stop feeding"
-"mother age" -> "mother relatedness"
-"mother age" -> "stop feeding"
-"mother cohort" -> "mother age"
+"U" -> "stop feeding"
 "mother cohort" -> "stop feeding"
 "mother relatedness" -> "child relatedness"
 "mother relatedness" -> "stop feeding"
-"physical constraints" -> "stop feeding"
 "residence pattern" -> "child relatedness"
 "residence pattern" -> "father relatedness"
 "residence pattern" -> "household size"
@@ -272,8 +265,6 @@ DAG1 <- dagitty('dag {
 "village" -> "stop feeding"
 }
 ')
-
-
 plot(DAG1)
 ```
 
@@ -295,7 +286,7 @@ This would result longer breastfeeding expected in households where the child ha
 
 # Approach
 
-## Simulate 
+## Simulate relatedness
 
 ```{r sim_function}
 #function to simulate breastfeeding data
@@ -479,17 +470,17 @@ We then run the same six cox model (including only the main predictors, as we di
 
 | model          | main predictors                                                       | covariates                                                           | panel |
 |----------------|-----------------------------------------------------------------------|----------------------------------------------------------------------| ---------|
-| child only     | child relatedness                                                     | sex + birth order + family size + <br> age + birth cohort + village  | a |
+| child only     | child relatedness                                                     | sex + birth order + family size +  age + birth cohort + village  | a |
 | mother only    | mother relatedness                                                    | same as above                                                        | b | 
 | father only    | father relatedness                                                    | same as above                                                        | c |
 | parents        | mother relatedness + father relatedness                               | same as above                                                        | d |
 | all members    | child relatedness + mother relatedness + father relatedness           | same as above                                                        | e |
-| residence type | household type <br> (Neolocal vs Duolocal, Matrilocal and Patrilocal) | same as above                                                        | f |
+| residence pattern | household type (Neolocal vs Duolocal, Matrilocal and Patrilocal) | same as above                                                        | f |
 
-SI Table \ref{tab:statsmodels}: hypotheses associated to causal models (note that the column 'Panel' indicates the panel in Figure \@ref(fig:text_cox), below, that reports the results relative to each regression. \label{tab:statsmodels}
+SI Table \ref{tab:statsmodels}: hypotheses associated to causal models (note that the column 'Panel' indicates the panel in Figure \@ref(fig:cox), below, that reports the results relative to each regression). \label{tab:statsmodels}
 
 
-Let's observe the grey dots in figure \@ref(fig:test-cox), where the large dots refer to the results from the datasets shown in figure \@ref(fig:dots), while the smear of smaller dots is given by 50 datasets simulated with different parameters. These represent hazard ratios for each causal model (listed as H1 to H4) estimated by the different cox regressions. Panel a) shows data relative to a model where we include only child relatedness as a predictor. Let's look at each hypothesis one at a time. In the first row we observe the hazard ratio of child relatedness calculated on data simulated according to H1. Note that the simulation included _postitive_ effect of child relatedness on breastfeeding duration, so we would expect a negative hazard ration, i.e. the more the child is related to the rest of the family, the longer will breastfeeding be. But if we include only child relatedness as a predictor, the negative effect of parents' relatedness overcomes that of child relatedness, and the hazard ration will appear to be positive: a counterintuitive result, but unavoidable given the connection between parents' and child's relatedness. Data simulated according to H2, where child relatedness has no direct effect, also produce an estimation that child relatedness will negatively affect breastfeeding duration. Once we move to H3 and H4, on the contrary, child relatedness has positive effect. Remeber that in both cases the data was simulated with a consistent positive effect of child relatedness, only including some effect for parents in H3 (positive for mother, negative for father) and no parental effect in H4. 
+Let's observe the grey dots in figure \@ref(fig:cox), where the large dots refer to the results from the datasets shown in figure \@ref(fig:dots), while the smear of smaller dots is given by 50 datasets simulated with different parameters. These represent hazard ratios for each causal model (listed as H1 to H4) estimated by the different cox regressions. Panel a) shows data relative to a model where we include only child relatedness as a predictor. Let's look at each hypothesis one at a time. In the first row we observe the hazard ratio of child relatedness calculated on data simulated according to H1. Note that the simulation included _postitive_ effect of child relatedness on breastfeeding duration, so we would expect a negative hazard ration, i.e. the more the child is related to the rest of the family, the longer will breastfeeding be. But if we include only child relatedness as a predictor, the negative effect of parents' relatedness overcomes that of child relatedness, and the hazard ration will appear to be positive: a counterintuitive result, but unavoidable given the connection between parents' and child's relatedness. Data simulated according to H2, where child relatedness has no direct effect, also produce an estimation that child relatedness will negatively affect breastfeeding duration. Once we move to H3 and H4, on the contrary, child relatedness has positive effect. Remeber that in both cases the data was simulated with a consistent positive effect of child relatedness, only including some effect for parents in H3 (positive for mother, negative for father) and no parental effect in H4. 
 Let's move to panel b). Here we are looking at a model that estimates only the effect of maternal relatedness, and again, let's look at the grey dots. The model applied on data generated according to H1 correctly estimate a negative effect of maternal relatedness on duration, or a positive hazard ratio. Similarly, H2 and H3 pick up on the positive effect of mom's relatedness, however they provide different effect sizes, even though the poisson simulation used the same parameter. This is because in H3 there is also a positive effect of child relatedness, which correlated to maternal relatedness and hence is picked up by the model. Data generated according to H4 still produce a positive effect of maternal relatedness, even though there was none in the simulation: this is because maternal relatedness is connected to child relatedness, which in turn has positive effect on breastfeeding duration.
 By this point it should be clear that simply interpreting the regression coefficients for these model will be unlikely to provide a reliable inference on the causal model generating the real data because of equifinality. The approach, then, is to compare the results of all these six cox regressions on the real data to results obtained with data generated according to different causal models. 
 
@@ -502,7 +493,7 @@ Summing up, while multiple causal models _could_ have generated results similar 
 
 
 
-```{r test-cox, fig.cap = "Multiple plots showing parameters estimated by cox models run on the real data (light blue in a-c, light colors in d-f ), in comparison to similar models run on simulated data (each row in each model represents an hypothesis, larger grey/darker color dot is relative to one specific set of data, smear is from replication with 50 different parameter sets).",  fig.height=8, fig.fullwidth=TRUE }
+```{r cox, fig.cap = "Multiple plots showing parameters estimated by cox models run on the real data (light blue in a-c, light colors in d-f ), in comparison to similar models run on simulated data (each row in each model represents an hypothesis, larger grey/darker color dot is relative to one specific set of data, smear is from replication with 50 different parameter sets).",  fig.height=8, fig.fullwidth=TRUE }
 #####real data
 status <- as.factor(Feeding$status)
 residence_real<-coxme(Surv(time,status)~PMR1+sex+order+ age+BirthPeriod+(1|Village/ITID)
@@ -549,7 +540,7 @@ store_coeffs <- matrix( NA, #matrix to store the coefficients,
 #plots simulation
 par(mfrow = c(3,2),mgp = c(1.5, 0.5, 0), mar = c(2.5, 2.5, 2, 1) + 0.1)
 #child only model
-plot(c(bf$child_sim[[1]]$coefficients, bf$child_sim[[2]]$coefficients, bf$child_sim[[3]]$coefficients, bf$child_sim[[4]]$coefficients),1:4, pch = 16, cex = 2, col = col.alpha("grey40", 0.8), main = "a", xlab = "coefficient child relatedness", ylab = "", yaxt = "n" , ylim = rev(c(0.5, 4.5)))
+plot(c(bf$child_sim[[1]]$coefficients, bf$child_sim[[2]]$coefficients, bf$child_sim[[3]]$coefficients, bf$child_sim[[4]]$coefficients),1:4, pch = 16, cex = 2, col = col.alpha("grey40", 0.8), main = "a", xlab = "hazard ratio child ", ylab = "", yaxt = "n" , ylim = rev(c(0.5, 4.5)))
 abline( v = 0 , col = "grey80")
 axis(2, at = 1:4, las=1,
      labels =  c("H1", "H2", "H3", "H4"))
@@ -575,7 +566,7 @@ points(rep(child_real$coefficients[1], 4),1:4, pch = 16, cex = 2, col = col.alph
 legend("topleft", inset = 0.02, c("Child, simulated", "Child, real data"), fill = c("grey40", "cornflowerblue"), border = c("grey40", "cornflowerblue"), box.col = "white")
 
 #mother
-plot(c(bf$mother_sim[[1]]$coefficients, bf$mother_sim[[2]]$coefficients, bf$mother_sim[[3]]$coefficients, bf$mother_sim[[4]]$coefficients),1:4, pch = 16, cex = 2, col = col.alpha("grey40", 0.8), main = "b", xlab = "coefficient mother relatedness", ylab = "", yaxt = "n" , ylim = rev(c(0.5, 4.5)))
+plot(c(bf$mother_sim[[1]]$coefficients, bf$mother_sim[[2]]$coefficients, bf$mother_sim[[3]]$coefficients, bf$mother_sim[[4]]$coefficients),1:4, pch = 16, cex = 2, col = col.alpha("grey40", 0.8), main = "b", xlab = "hazard ratio mother", ylab = "", yaxt = "n" , ylim = rev(c(0.5, 4.5)))
 abline( v = 0 , col = "grey80")
 axis(2, at = 1:4, las=1,
      labels =  c("H1", "H2", "H3", "H4"))
@@ -601,7 +592,7 @@ points(rep(mother_real$coefficients[1], 4),1:4, pch = 16, cex = 2, col = col.alp
 legend("topleft", inset = 0.02,  c("Mother, simulated", "Mother, real data"), fill = c("grey40", "cornflowerblue"), border = c("grey40", "cornflowerblue"), box.col = "white")
 
 #father
-plot(c(bf$father_sim[[1]]$coefficients, bf$father_sim[[2]]$coefficients, bf$father_sim[[3]]$coefficients, bf$father_sim[[4]]$coefficients),1:4, pch = 16, cex = 2, col = col.alpha("grey40", 0.8), main = "c", xlab = "coefficient father relatedness", ylab = "", yaxt = "n" , ylim = rev(c(0.5, 4.5)))
+plot(c(bf$father_sim[[1]]$coefficients, bf$father_sim[[2]]$coefficients, bf$father_sim[[3]]$coefficients, bf$father_sim[[4]]$coefficients),1:4, pch = 16, cex = 2, col = col.alpha("grey40", 0.8), main = "c", xlab = "hazard ratio father", ylab = "", yaxt = "n" , ylim = rev(c(0.5, 4.5)))
 abline( v = 0 , col = "grey80")
 axis(2, at = 1:4, las=1,
      labels =  c("H1", "H2", "H3", "H4"))
@@ -624,13 +615,13 @@ PI5_diff_coeff_fixed_pars[,"father only"] <- apply(store_coeffs, 1, PI)[1,]
 PI95_diff_coeff_fixed_pars[,"father only"] <- apply(store_coeffs, 1, PI)[2,]
 
 points(rep(father_real$coefficients[1], 4),1:4, pch = 16, cex = 2, col = col.alpha("cornflowerblue", 0.8))
-legend("bottomright", inset = 0.02, c("Father, simulated", "Father, real data"), fill = c("grey40", "cornflowerblue"), border = c("grey40", "cornflowerblue"), box.col = "white")
+legend("topright", inset = 0.02, c("Father, simulated", "Father, real data"), fill = c("grey40", "cornflowerblue"), border = c("grey40", "cornflowerblue"), box.col = "white")
 
 #both parents
 store_coeffs_2 <- matrix( NA, #matrix to store the coefficients, second set to keep fathers' stuff
                     nrow = 4, ncol = N_attempted_pars, byrow = FALSE, dimnames = list(c("H1", "H2", "H3", "H4"), NULL))
 
-plot(c(bf$parents_sim[[1]]$coefficients, bf$parents_sim[[2]]$coefficients, bf$parents_sim[[3]]$coefficients, bf$parents_sim[[4]]$coefficients),rep(1:4, each = 2) + c(-0.1, 0.1), pch = 16, cex = 2, col = c("darkred", "darkblue"), main = "d", xlab = "coefficient parents relatedness", ylab = "", yaxt = "n" , ylim = rev(c(0.5, 4.5)))
+plot(c(bf$parents_sim[[1]]$coefficients, bf$parents_sim[[2]]$coefficients, bf$parents_sim[[3]]$coefficients, bf$parents_sim[[4]]$coefficients),rep(1:4, each = 2) + c(-0.1, 0.1), pch = 16, cex = 2, col = c("darkred", "darkblue"), main = "d", xlab = "hazard ratio parents", ylab = "", yaxt = "n" , ylim = rev(c(0.5, 4.5)))
 abline( v = 0 , col = "grey80")
 axis(2, at = 1:4, las=1,
      labels =  c("H1", "H2", "H3", "H4"))
@@ -660,13 +651,13 @@ PI5_diff_coeff_fixed_pars[,"parents, father"] <- apply(store_coeffs_2, 1, PI)[1,
 PI95_diff_coeff_fixed_pars[,"parents, father"] <- apply(store_coeffs_2, 1, PI)[2,]
 
 points(rep(parents_real$coefficients[1:2], 4),rep(1:4, each = 2) + c(-0.1, 0.1), pch = 16, cex = 2, col = c("indianred", "cornflowerblue"))
-legend("bottomright", inset = 0.02, c("Mother", "Father"), fill = c("indianred", "cornflowerblue"), border = c( "indianred", "cornflowerblue"), box.col = "white")
+legend("topleft", inset = 0.02, c("Mother", "Father"), fill = c("indianred", "cornflowerblue"), border = c( "indianred", "cornflowerblue"), box.col = "white")
 
 #all family members
 store_coeffs_3 <- matrix( NA, #matrix to store the coefficients, second set to keep fathers' stuff
                     nrow = 4, ncol = N_attempted_pars, byrow = FALSE, dimnames = list(c("H1", "H2", "H3", "H4"), NULL))
 
-plot(c(bf$all_sim[[1]]$coefficients, bf$all_sim[[2]]$coefficients, bf$all_sim[[3]]$coefficients, bf$all_sim[[4]]$coefficients),rep(1:4, each = 3) + c(-0.15, 0, 0.15), pch = 16, cex = 2, col = c("darkgreen", "darkred", "darkblue"), main = "e", xlab = "coefficient relatedness by family member", ylab = "", yaxt = "n" , ylim = rev(c(0.5, 4.5)))
+plot(c(bf$all_sim[[1]]$coefficients, bf$all_sim[[2]]$coefficients, bf$all_sim[[3]]$coefficients, bf$all_sim[[4]]$coefficients),rep(1:4, each = 3) + c(-0.15, 0, 0.15), pch = 16, cex = 2, col = c("darkgreen", "darkred", "darkblue"), main = "e", xlab = "hazard ratio by family member", ylab = "", yaxt = "n" , ylim = rev(c(0.5, 4.5)))
 abline( v = 0 , col = "grey80")
 axis(2, at = 1:4, las=1,
      labels =  c("H1", "H2", "H3", "H4"))
@@ -703,10 +694,10 @@ PI5_diff_coeff_fixed_pars[,"all, father"] <- apply(store_coeffs_3, 1, PI)[1,]
 PI95_diff_coeff_fixed_pars[,"all, father"] <- apply(store_coeffs_3, 1, PI)[2,]
 
 points(rep(all_real$coefficients[1:3], 4),rep(1:4, each = 3) + c(-0.15, 0, 0.15), pch = 16, cex = 2, col = c("lightgreen","indianred", "cornflowerblue"))
-legend("bottomright", inset = 0.02, c("Child", "Mother", "Father"), fill = c("lightgreen", "indianred", "cornflowerblue"), border = c("lightgreen", "indianred", "cornflowerblue"), box.col = "white")
+legend("topleft", inset = 0.02, c("Child", "Mother", "Father"), fill = c("lightgreen", "indianred", "cornflowerblue"), border = c("lightgreen", "indianred", "cornflowerblue"), box.col = "white")
 
 #residence type
-plot(c(bf$residence_sim[[1]]$coefficients, bf$residence_sim[[2]]$coefficients, bf$residence_sim[[3]]$coefficients, bf$residence_sim[[4]]$coefficients),rep(1:4, each = 3) + c(-0.15, 0, 0.15), pch = 16, cex = 2, col = c("darkgreen", "darkred", "darkblue"), main = "f", xlab = "coefficient relatedness by residence type", ylab = "", yaxt = "n" , ylim = rev(c(0.5, 4.5)))
+plot(c(bf$residence_sim[[1]]$coefficients, bf$residence_sim[[2]]$coefficients, bf$residence_sim[[3]]$coefficients, bf$residence_sim[[4]]$coefficients),rep(1:4, each = 3) + c(-0.15, 0, 0.15), pch = 16, cex = 2, col = c("darkgreen", "darkred", "darkblue"), main = "f", xlab = "hazard ratio by residence type", ylab = "", yaxt = "n" , ylim = rev(c(0.5, 4.5)))
 abline( v = 0 , col = "grey80")
 axis(2, at = 1:4, las=1,
      labels =  c("H1", "H2", "H3", "H4"))
@@ -742,7 +733,7 @@ avg_diff_coeff_fixed_pars[,"residence, Patrilocal"] <- apply(store_coeffs_3, 1, 
 PI5_diff_coeff_fixed_pars[,"residence, Patrilocal"] <- apply(store_coeffs_3, 1, PI)[1,]
 PI95_diff_coeff_fixed_pars[,"residence, Patrilocal"] <- apply(store_coeffs_3, 1, PI)[2,]
 points(rep(residence_real$coefficients[1:3], 4),rep(1:4, each = 3) + c(-0.15, 0, 0.15), pch = 16, cex = 2, col = c("lightgreen", "indianred",  "lightblue"))
-legend("bottomright", inset = 0.02, c( "Duolocal", "Matrilocal",  "Patrilocal"), fill = c( "lightgreen", "indianred", "lightblue"), border = c( "lightgreen", "indianred", "lightblue"), box.col = "white")
+legend("topleft", inset = 0.02, c( "Duolocal", "Matrilocal",  "Patrilocal"), fill = c( "lightgreen", "indianred", "lightblue"), border = c( "lightgreen", "indianred", "lightblue"), box.col = "white")
 #1 duolocal
 #2 matrilocal
 #3 neolocal
@@ -751,9 +742,8 @@ legend("bottomright", inset = 0.02, c( "Duolocal", "Matrilocal",  "Patrilocal"),
 for (i in 1:4) {
   avg_diff_coeff_fixed_pars[i,"mean"] <- mean(avg_diff_coeff_fixed_pars[i,1:11])
 }
-
-
 ```
+
 
 <!-- #Table \ref{tab:diffs_pars_hyp} reports the average difference between the coefficient estimated by cox models run on the real data and coefficients estimated by cox models run on 50 different simulations per each causal model. REPORT RESULT -->
 
@@ -766,15 +756,15 @@ for (i in 1:4) {
 
 ### Estimate the parameter set most closely matching the real data
 
-A second contribution to inference can come from a search in the parameter space for a combination of parameters that more closely match the results from the real data. To do so, we simulate 300 datasets from a random set of parameters where the intercept, the parameter for child's and parent's relatedness are sampled from a Gaussian distribution with mean 0 and SD 3. We calculate the mean difference between the coefficients estimated from the real data and the coefficients estimated from each dataset for the different cox models (described in table \ref{tab:statsmodels}), and select the set of parameters with the best match to the real data. We repeat the proces 100 times, and calculate the mean value of these parameters, as well as the 5th and 95th percentiles. These are reported in table \ref{tab:find_generative_parameters}.
+A second contribution to inference can come from a search in the parameter space for a combination of parameters that more closely match the results from the real data. To do so, we simulate 500 datasets from a random set of parameters where the intercept, the parameter for child's and parent's relatedness are sampled from a Gaussian distribution with mean 0 and SD 3. We calculate the mean difference between the coefficients estimated from the real data and the coefficients estimated from each dataset for the different cox models (described in table \ref{tab:statsmodels}), and select the set of parameters with the best match to the real data. We repeat the process 250 times, and calculate the mean value of these parameters, as well as the 5th and 95th percentiles. These are reported in table \ref{tab:find_generative_parameters}.
 
 ```{r find_generative_parameters, cache=TRUE}
-n_sims <- 100
+n_sims <- 250
 best_pars <- matrix( 0,
                      nrow = 4, ncol = n_sims, byrow = FALSE, dimnames = list(c("intercept", "child", "mother", "father"), NULL))
 for (i in 1:n_sims) {
   best_diff <- 1000
-  for (j in 1:300) {
+  for (j in 1:500) {
          best_poiss_par <- matrix(c( rnorm(1, 0, 3), #intercept
                              rnorm(1, 0, 3), #child
                              rnorm(1, 0, 3), #mother
