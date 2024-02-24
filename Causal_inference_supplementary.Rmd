@@ -125,7 +125,7 @@ In this paper we categorized it into 2 characters: 1st born and >=2nd born, beca
 
 * Mother cohort:the middle and latter half of the 20th century saw a gradual decline of breastfeeding with the replacement of formula feeding in many high income contexts (Tomori et al., 2016). We controlled for mother birth time at 10 years cohort, in order to see how dose globalization influence the norm and the practices of feeding, in addition, several political factors might also influence the feeding practices, for example, child policy that was implemented in the early 1980s, and the compulsory education policy that was implemented at 1990s. We thus categorized mother birth into 10 years cohort:  <=1980, 1980-1989 to >=1990
 
-* Physical constraints: physical problems are one of the important reasons for terminating breastfeeding (Verronen, 1982; Page et al 2021), i.e. sore and cracked nipples, painful breasts and poor latching et al (Li et al., 2008) are commonly reported as important problems and act as a barrier to continued breastfeeding.  It’s considered here as a possible concause, but not a confounder.  
+* Physical constraints: physical problems are one of the important reasons for terminating breastfeeding (Verronen, 1982; Page et al 2021), i.e. sore and cracked nipples, painful breasts and poor latching et al (Li et al., 2008) are commonly reported as important problems and act as a barrier to continued breastfeeding.  we have qualitative data on this question but no quantitative data, so this variable is considered here as a possible concause, but not a confounder.  
 
 
 |                               |      Zhaba            |      Lugu            |      Zhuoni            |      Maqu            |      Shangrila            |
