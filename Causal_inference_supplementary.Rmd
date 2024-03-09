@@ -109,11 +109,14 @@ legend(50, 0.28, c("Duolocal", "Matrilocal", "Neolocal",  "Patrilocal"), fill = 
 
 * Village: Data was collected across the Zhaba, Lugu, Zhuoni, Maqu, and Shangrila regions, each comprising numerous distinct villages. Village is used as a proxy for geographical/ecological differences between these groups and for ethnicity, which is linked to cultural practices and prevalent subsistence strategies that can influence breastfeeding duration. The prevalence of residence patterns varies in each region, see Table \ref{tab:descriptive}, for example Duolocality is prevalent in Zhaba and Lugu (58.6%  and 40.8% of households) and completely absent in Zhuoni, Maqu and Shangrila, the last of which is prevalently matrilocal (44.6%), while the remaining two are largely patrilocal (60 and 66.9% respectively).
 
+
 * Residence pattern: one between duolocal (each parent remains within their natal household, relatedness of the mother is highest, lowest for the father), matrilocal (the couple lives with the wife's family, relatedness is high for the child and mother, low for the father), neolocal (the couple lives in a new household, relatedness is lower and similar for mother and father, high for the child) or patrilocal (the couple lives with the husband's family, father and child have high relatedness, lowest for the mother). We assume that any cultural effect linked to residence pattern is clustered at the level of village (ethnicity), rather than residence pattern.
+
 
 
 * Household size: The people you live with can greatly influence the amount of assistance you receive; in some cases, it also determines the number of potential competitors you may face. Therefore, the size of the household is crucial for breastfeeding practices, as it is associated with the level of direct support (such as bottle-feeding infants) or indirect support (such as relieving the mother of household chores so she can focus on breastfeeding) that the mother can receive during her breastfeeding journey.
 We categorized household size into 3 different types (small, medium and big), based on how many family members were living together in the same household. Small household with <= 4 family members, medium with 5-8 family members, and big with >8 family members.  This classification is in line with the categorization that we used in another paper with the same demographic database (Chen et al 2023). 
+
 
 * Birth order: Siblings compete for family resources, a competition that begins from birth. For instance, if a mother breastfeeds one child for an extended period, it may delay her ability to have another baby. The intensity of this competition varies between full and half-siblings, as noted by Trivers in 1974. Parents might exhibit a preference for the older offspring, a phenomenon known as primogeniture, which has been documented in one of the populations from the same database (Du et al. 2023). However, parents may also show a preference for the youngest child, particularly in contexts where child policies reduce the likelihood of having more children.
 In this paper we present this variable as either 1st born or >=2nd born. This is because we only included births after 2010 (to improve accurate recalling of breastfeeding information), by which point the area was interested by a fully implemented child policy (a maximum of 3 children per woman in this area). As a result, our data include only 4 births of a 3rd child, which were thus classified together with 2nd borns. 
@@ -171,6 +174,7 @@ table3 <- tableby(District ~ PMR+ BirthPeriod +order + Csex +
 labels(table3) <- c(District = "District", PMR = "Residence", BirthPeriod = "Cohort", order = "Birth order", Csex = "Gender", HSCAT = "Household", AgeStopFeed = "Duration", mother = "Mother", child = "Child", father = "Father")
 summary(table3, digits = 2)
 ```
+
 SI Table \ref{tab:descriptive}: Descriptive statistics by ethnic group. \label{tab:descriptive}
 
 ## A digression on causes for weaning
