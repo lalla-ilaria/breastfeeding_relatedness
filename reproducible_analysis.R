@@ -10,14 +10,16 @@ usePackage <- function(p) {
 
 usePackage("survival")
 usePackage("survminer")
-usePackage("coxme")
 usePackage("Rmisc")
 usePackage("writexl")
-usePackage("arsenal")
 usePackage("rmarkdown")
 usePackage("raster")
 usePackage("truncnorm")
 usePackage("tidyverse")
+usePackage("coxme")
+usePackage("arsenal")
+#some packages might need input from the user (click yest for installing, e.g. coxme, arsenal)
+
 ###############################
 #### LOAD & process DATA ######
 ###############################
@@ -50,8 +52,10 @@ control<- coxme(Surv(time,status)~Csex+order+HSCAT+BirthPeriod+(1|Village/ITID)
 ######## PLOTS ################
 ###############################
 
-#Figure 2
-######density plot
+##############
+# Figure 2
+############
+#density plot
 duo <- subset(Feeding, PMR=="Duo")
 patri<-subset(Feeding, PMR=="Patri")
 matri<-subset(Feeding, PMR=="Matri")
@@ -94,6 +98,64 @@ legend("topright", legend=c("Patrilocal", "Duolocal","Matrilocal","Neolocal"), f
 dev.off()
 
 
+##########
+#Figure 3
+##########
+hazard_ratios <- matrix(nrow = 12, ncol = 3, dimnames = list( c("Son (vs daughter)", "2nd (vs 1st) child", "Medium size (vs. big)", "Small size (vs. big)", "Mother cohort >=1990 (vs. <1980)", "Mother cohort 1980-89 (vs. <1980)", "Duolocal (vs. Patrilocal)", "Matrilocal (vs. Patrilocal)", "Neolocal (vs. Patrilocal)", "Child relatedness", "Mother relatedness", "Fahter relatedness") , c("Model 1 - HR (p value)", "Model 2 - HR (p value)", "Model 3 - HR (p value)")))
+#####Results from mixed effects models, HR & 95% CI
+days_se<- sqrt(diag(vcov(control)))
+days_coef<- fixef(control)
+upper.CI<- days_coef+ 1.96*days_se
+lower.CI<- days_coef-1.96*days_se
+HR<- exp(days_coef)
+p_val <- signif(1 - pchisq((days_coef/days_se)^2, 1), 2)
+model <- rep("control", length(days_se))
+forest_data <- cbind(days_coef,upper.CI,lower.CI,HR, p_val, model)
+hazard_ratios[1:length(days_se),1] <- paste(round(HR, 2), " (", round(p_val, 2), ")", sep = "") 
+
+days_se<- sqrt(diag(vcov(res)))
+days_coef<- fixef(res)
+upper.CI<- days_coef+ 1.96*days_se
+lower.CI<- days_coef-1.96*days_se
+HR<- exp(days_coef)
+p_val <- signif(1 - pchisq((days_coef/days_se)^2, 1), 2)
+model <- rep("residence", length(days_se))
+forest_data <- rbind(forest_data,
+                     cbind(days_coef,upper.CI,lower.CI,HR, p_val, model)[7:9,])
+hazard_ratios[1:length(days_se),2] <- paste(round(HR, 2), " (", round(p_val, 2), ")", sep = "") 
+
+
+days_se<- sqrt(diag(vcov(all)))
+days_coef<- fixef(all)
+upper.CI<- days_coef+ 1.96*days_se
+lower.CI<- days_coef-1.96*days_se
+HR<- exp(days_coef)
+p_val <- signif(1 - pchisq((days_coef/days_se)^2, 1), 2)
+model <- rep("all", length(days_se))
+forest_data <- rbind(forest_data,
+                     cbind(days_coef,upper.CI,lower.CI,HR, p_val, model)[7:9,])
+hazard_ratios[1:6,3] <- paste(round(HR[1:6], 2), " (", round(p_val[1:6], 2), ")", sep = "") 
+hazard_ratios[10:12,3] <- paste(round(HR[7:9], 2), " (", round(p_val[7:9], 2), ")", sep = "") 
+
+
+forest_data <- as.data.frame(forest_data)
+forest_data$color <- ifelse(forest_data$model == "control", "#281713", ifelse(forest_data$model == "residence", "cornflowerblue", "indianred"))
+
+png("Fig3.png", width = 16, height = 7, units = "cm", res = 300, pointsize = 9)
+par(mfrow = c(1,1),mgp = c(2.5, 0.5, 0), mar = c(2.5, 14, 2, 1) + 0.1)
+plot(forest_data$days_coef, nrow(forest_data):1, xlim = c(-7, 4), 
+     pch = 16, col = forest_data$color, cex = 2,
+     xlab = "coefficient estimate", ylab = "", yaxt = "n")
+abline( v = 0 , col = "grey80")
+for (i in nrow(forest_data):1) {
+  lines(c(forest_data$lower.CI[i], forest_data$upper.CI[i]), rep(c(12:1)[i], each =2), col = forest_data$color[i])
+}
+axis(2, at = nrow(forest_data):1, las=1,
+     labels =  c("Son (vs daughter)", "2nd (vs 1st) child", "Medium size (vs. big)", "Small size (vs. big)", "Mother cohort >=1989 (vs. <1980)", "Mother cohort 1980-89 (vs. <1980)", "Duolocal (vs. Patrilocal)", "Matrilocal (vs. Patrilocal)", "Neolocal (vs. Patrilocal)", "Child relatedness", "Mother relatedness", "Fahter relatedness"))
+dev.off()
+
+
+#############
 #Figure 4
 ###############
 #function to simulate breastfeeding data
@@ -242,58 +304,7 @@ legend("topleft", inset = 0.02, c("Child", "Mother", "Father"), fill = c("lightg
 dev.off()
 ##################
 
-hazard_ratios <- matrix(nrow = 12, ncol = 3, dimnames = list( c("Son (vs daughter)", "2nd (vs 1st) child", "Medium size (vs. big)", "Small size (vs. big)", "Mother cohort >=1990 (vs. <1980)", "Mother cohort 1980-89 (vs. <1980)", "Duolocal (vs. Patrilocal)", "Matrilocal (vs. Patrilocal)", "Neolocal (vs. Patrilocal)", "Child relatedness", "Mother relatedness", "Fahter relatedness") , c("Model 1 - HR (p value)", "Model 2 - HR (p value)", "Model 3 - HR (p value)")))
-#####Results from mixed effects models, HR & 95% CI
-days_se<- sqrt(diag(vcov(control)))
-days_coef<- fixef(control)
-upper.CI<- days_coef+ 1.96*days_se
-lower.CI<- days_coef-1.96*days_se
-HR<- exp(days_coef)
-p_val <- signif(1 - pchisq((days_coef/days_se)^2, 1), 2)
-model <- rep("control", length(days_se))
-forest_data <- cbind(days_coef,upper.CI,lower.CI,HR, p_val, model)
-hazard_ratios[1:length(days_se),1] <- paste(round(HR, 2), " (", round(p_val, 2), ")", sep = "") 
 
-days_se<- sqrt(diag(vcov(res)))
-days_coef<- fixef(res)
-upper.CI<- days_coef+ 1.96*days_se
-lower.CI<- days_coef-1.96*days_se
-HR<- exp(days_coef)
-p_val <- signif(1 - pchisq((days_coef/days_se)^2, 1), 2)
-model <- rep("residence", length(days_se))
-forest_data <- rbind(forest_data,
-                     cbind(days_coef,upper.CI,lower.CI,HR, p_val, model)[7:9,])
-hazard_ratios[1:length(days_se),2] <- paste(round(HR, 2), " (", round(p_val, 2), ")", sep = "") 
-
-
-days_se<- sqrt(diag(vcov(all)))
-days_coef<- fixef(all)
-upper.CI<- days_coef+ 1.96*days_se
-lower.CI<- days_coef-1.96*days_se
-HR<- exp(days_coef)
-p_val <- signif(1 - pchisq((days_coef/days_se)^2, 1), 2)
-model <- rep("all", length(days_se))
-forest_data <- rbind(forest_data,
-                     cbind(days_coef,upper.CI,lower.CI,HR, p_val, model)[7:9,])
-hazard_ratios[1:6,3] <- paste(round(HR[1:6], 2), " (", round(p_val[1:6], 2), ")", sep = "") 
-hazard_ratios[10:12,3] <- paste(round(HR[7:9], 2), " (", round(p_val[7:9], 2), ")", sep = "") 
-
-
-forest_data <- as.data.frame(forest_data)
-forest_data$color <- ifelse(forest_data$model == "control", "#281713", ifelse(forest_data$model == "residence", "cornflowerblue", "indianred"))
-
-png("Fig3.png", width = 16, height = 7, units = "cm", res = 300, pointsize = 9)
-par(mfrow = c(1,1),mgp = c(2.5, 0.5, 0), mar = c(2.5, 14, 2, 1) + 0.1)
-plot(forest_data$days_coef, nrow(forest_data):1, xlim = c(-7, 4), 
-     pch = 16, col = forest_data$color, cex = 2,
-     xlab = "coefficient estimate", ylab = "", yaxt = "n")
-abline( v = 0 , col = "grey80")
-for (i in nrow(forest_data):1) {
-  lines(c(forest_data$lower.CI[i], forest_data$upper.CI[i]), rep(c(12:1)[i], each =2), col = forest_data$color[i])
-  }
-axis(2, at = nrow(forest_data):1, las=1,
-     labels =  c("Son (vs daughter)", "2nd (vs 1st) child", "Medium size (vs. big)", "Small size (vs. big)", "Mother cohort >=1989 (vs. <1980)", "Mother cohort 1980-89 (vs. <1980)", "Duolocal (vs. Patrilocal)", "Matrilocal (vs. Patrilocal)", "Neolocal (vs. Patrilocal)", "Child relatedness", "Mother relatedness", "Fahter relatedness"))
-dev.off()
 
 
 
