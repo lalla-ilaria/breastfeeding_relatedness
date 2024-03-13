@@ -1,13 +1,11 @@
 ---
-title: "Supplementary information for Manuscript titled Kin selection and sexual conflict influence the duration of breastfeeding  - considerations for causal inference"
+title: "Supplementary information for Manuscript titled `Kin selection and sexual conflict drive the duration of breastfeeding'  - considerations for causal inference"
 output:
   bookdown::pdf_document2: default
-date: "`r Sys.Date()`"
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
-library(rethinking)
 library(dagitty)
 library(truncnorm)
 library(survival)
@@ -503,7 +501,7 @@ legend(0.1, 145, c("simulated", "real"), fill = c("lightgrey", adjustcolor("corn
 ## Generate simulated breastfeeding duration according to different causal models 
 
  
-We then generate duration of breastfeeding from these genetic relatedness (simulated) data we sample from a Poisson distribution which rate $\lambda$ depends on a linear function of child and parent's relatedness (indicated in the equation below as $C, M \text{ and } D$ respectively). The parameters for the predictors $\beta, \gamma \text{ and } \delta$ are selected depending on the two main alternative hypotheses and possible other scenarios, including a combination of the two hypotheses (see SI table \ref{tab:hypotheses}).
+We then generate duration of breastfeeding from these genetic relatedness (simulated) data we sample from a Poisson distribution which rate $\lambda$ depends on a linear function of child and parent's relatedness (indicated in the equation below as $C, M \text{ and } D$ respectively). The parameters for the predictors $\beta, \gamma \text{ and } \delta$ are selected depending on the two main alternative hypotheses and possible other scenarios, including a combination of the two hypotheses (see SI table \ref{tab:hypotheses}, which recapitulates table 1 in the main text plus an additional hypothesis considered here to add a case study).
  
  $$
  Duration \sim \mathrm{Poisson} (\lambda)
