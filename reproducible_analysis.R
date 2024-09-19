@@ -9,7 +9,7 @@ usePackage <- function(p) {
 }
 
 usePackage("survival")
-usePackage("survminer")
+#usePackage("survminer")
 usePackage("Rmisc")
 usePackage("writexl")
 usePackage("rmarkdown")
@@ -162,7 +162,7 @@ dev.off()
 #note that the function needs a set of average relatednesses for the parents in each residence type (relatedness_averages), and a set of parameters for the poisson simulation (one value per each of four parameters for each considered hypothesis, within the list poiss_parameters)
 #note that the function has the option to return the full set of data and model results, or only the coefficients estimated by the cox models
 # note that there (WILL BE) the option to test with censoring
-sim_breastfeeding <- function (N, relatedness_avg = relatedness_averages, poiss_pars = poiss_parameters, n_hyp = ncol(poiss_pars), censor = FALSE, censor_at = 12, coefficients = FALSE ){
+sim_breastfeeding <- function (N, relatedness_avg = relatedness_averages, poiss_pars = poiss_parameters, n_hyp = ncol(poiss_pars), censor = FALSE, censor_at = 24, coefficients = FALSE ){
   #generate household types and assign color
   #1 neolocal
   #2 duolocal
@@ -199,7 +199,7 @@ sim_breastfeeding <- function (N, relatedness_avg = relatedness_averages, poiss_
       status[,i] <-  rep(1, N)} else {
         status[,i] <- ifelse(duration[,i] > censor_at, 0, 1) }
 
-    #censor to twelve months
+    #censor to 24 months
     if(censor == TRUE){
       duration[,i] <- ifelse(duration[,i] >= censor_at, censor_at, duration[,i])
     }#if censor
@@ -285,7 +285,7 @@ png("Fig4.png", width = 9, height = 7, units = "cm", res = 300, pointsize = 9)
 par(mfrow = c(1,1),mgp = c(1.5, 0.5, 0), mar = c(2.5, 2.5, 2, 1) + 0.1)
 plot(c(bf$all_sim[[1]]$coefficients, bf$all_sim[[2]]$coefficients, bf$all_sim[[3]]$coefficients),rep(1:3, each = 3) + c(-0.15, 0, 0.15),
      xlim = c(min(bf$all_sim[[3]]$coefficients) - 2.5, max (bf$all_sim[[2]]$coefficients) + 3.5),
-     pch = 16, cex = 2, col = c("darkgreen", "darkred", "darkblue"), xlab = "cox parameter estimate by family member", ylab = "", yaxt = "n" , ylim = rev(c(0.5, 3.5)))
+     pch = 16, cex = 1, col = c("darkgreen", "darkred", "darkblue"), xlab = "cox parameter estimate by family member", ylab = "", yaxt = "n" , ylim = rev(c(0.5, 3.5)))
 abline( v = 0 , col = "grey80")
 axis(2, at = 1:3, las=1,
      labels =  c("H1", "H2", "H3"))
@@ -299,7 +299,7 @@ for (i in 1:length(par_value)) {
   points(unlist(c(coeffs$all[1], coeffs$all[2], coeffs$all[3])), rep(1:3, each = 3) + c(-0.15, 0, 0.15), pch = 16, col = adjustcolor(c("darkgreen","darkred", "darkblue"), alpha.f=0.4))
 }
 
-points(rep(all$coefficients[7:9], 3),rep(1:3, each = 3) + c(-0.15, 0, 0.15), pch = 16, cex = 2, col = c("lightgreen","indianred", "cornflowerblue"))
+points(rep(all$coefficients[7:9], 3),rep(1:3, each = 3) + c(-0.15, 0, 0.15), pch = 15, cex = 2, col = c("lightgreen","indianred", "cornflowerblue"))
 legend("topleft", inset = 0.02, c("Child", "Mother", "Father"), fill = c("lightgreen", "indianred", "cornflowerblue"), border = c("lightgreen", "indianred", "cornflowerblue"), box.col = "white")
 dev.off()
 ##################
